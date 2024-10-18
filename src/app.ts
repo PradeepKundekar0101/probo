@@ -6,7 +6,7 @@ import { onrampRouter } from "./routes/onramp";
 import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import { resetDB } from "./utils/resetDB";
-
+import {marketRouter} from "./routes/market"
 const app = express();
 
 app.use(express.json());
@@ -22,5 +22,6 @@ app.use('/balance', balanceRouter);
 app.use('/onramp', onrampRouter);
 app.use('/orderbook', orderBookRouter);
 app.use('/order', orderRouter);
+app.use('/market', marketRouter);
 
 export default app;

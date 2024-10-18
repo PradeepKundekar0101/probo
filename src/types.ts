@@ -1,3 +1,11 @@
+// src/utils/generateOrderId.ts
+import { v4 as uuidv4 } from 'uuid';
+
+export function generateOrderId(): string {
+  return uuidv4();
+}
+
+// src/types/index.ts
 export interface UserBalance {
   balance: number;
   locked: number;
@@ -22,8 +30,8 @@ export interface PriceLevel {
 
 export interface OrderBook {
   [symbol: string]: {
-    yes: { [price: string]: PriceLevel };
-    no: { [price: string]: PriceLevel };
+    yes: { [price: string]: OrderEntry[] };
+    no: { [price: string]: OrderEntry[] };
   };
 }
 
@@ -50,3 +58,4 @@ export interface Market {
 }
 
 export type StockType = 'yes' | 'no';
+
