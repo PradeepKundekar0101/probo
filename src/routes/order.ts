@@ -1,7 +1,8 @@
 import express from "express";
-import { buyStock,cancelOrder,sellStock} from "../controller/order";
+import { buyStock,cancelOrder,getOrderByUserId,sellStock} from "../controller/order";
 export const orderRouter = express.Router();
 orderRouter.post("/buy", buyStock);
 orderRouter.post("/sell", sellStock);
 orderRouter.post("/cancel",cancelOrder)
+orderRouter.get("/:user",getOrderByUserId)
 

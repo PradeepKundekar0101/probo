@@ -1,4 +1,4 @@
-// src/utils/generateOrderId.ts
+
 import { v4 as uuidv4 } from 'uuid';
 
 export function generateOrderId(): string {
@@ -30,8 +30,14 @@ export interface PriceLevel {
 
 export interface OrderBook {
   [symbol: string]: {
-    yes: { [price: string]: OrderEntry[] };
-    no: { [price: string]: OrderEntry[] };
+    sell:{
+      yes: { [price: string]: OrderEntry[] };
+      no: { [price: string]: OrderEntry[] };
+    },
+    buy:{
+      yes: { [price: string]: OrderEntry[] };
+      no: { [price: string]: OrderEntry[] };
+    }
   };
 }
 
@@ -52,9 +58,12 @@ export interface Market {
   description: string;
   startTime: Date;
   endTime: Date;
-  initialYesTokens: number;
-  initialNoTokens: number;
+  yes: number;
+  no: number;
   result: StockType | null;
+}
+export interface Markets {
+  [stockSymbol:string]:Market 
 }
 
 export type StockType = 'yes' | 'no';

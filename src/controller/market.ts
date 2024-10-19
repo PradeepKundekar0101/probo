@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { markets, stockBalances, inrBalances, orderBook } from "../db";
+import {  stockBalances, inrBalances, orderBook, markets, currentMarketPrice } from "../db";
 import { Market, StockType } from "../types";
 import { catchAsync, sendResponse } from "../utils/api.util";
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
@@ -13,7 +13,7 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
     initialNoTokens,
   } = req.body;
 
-  if (markets[stockSymbol]) {
+  if (orderBook[stockSymbol]) {
     return res.status(400).json({ error: "Market already exists" });
   }
 
@@ -23,28 +23,26 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
     description,
     startTime: new Date(startTime),
     endTime: new Date(endTime),
-    initialYesTokens,
-    initialNoTokens,
+    yes:initialYesTokens,
+    no:initialNoTokens,
     result: null,
   };
-
   markets[stockSymbol] = market;
-
-  // Initialize market maker's stock balances
-  const marketMakerId = "marketMaker";
-  if (!stockBalances[marketMakerId]) {
-    stockBalances[marketMakerId] = {};
-  }
-  stockBalances[marketMakerId][stockSymbol] = {
-    yes: { quantity: initialYesTokens, locked: 0 },
-    no: { quantity: initialNoTokens, locked: 0 },
-  };
-
-  // Initialize order book
   orderBook[stockSymbol] = {
-    yes: {},
-    no: {},
+    buy:{
+      yes: {},
+      no: {},
+    },
+    sell:{
+      yes: {},
+      no: {},
+    }
   };
+  currentMarketPrice[stockSymbol]={
+    yes:500,
+    no:500
+  }
+ 
 
   return sendResponse(res, 201, { data: "Market created successfully" });
 });
@@ -84,4 +82,14 @@ export const settleMarket = catchAsync(async (req: Request, res: Response) => {
 
   delete orderBook[stockSymbol];
   res.status(200).json({ data: "done" });
+});
+export const getMarketPrice = catchAsync(async (req: Request, res: Response) => {
+  const { stockSymbol } = req.body;
+  if (!markets[stockSymbol]) {
+    return sendResponse(res,404,"market not found")
+  }
+  if(!currentMarketPrice[stockSymbol])
+    return sendResponse(res,404,"market price not found")
+  return sendResponse(res,200,currentMarketPrice[stockSymbol])
+  
 });
