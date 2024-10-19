@@ -7,13 +7,15 @@ import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import { resetDB } from "./utils/resetDB";
 import {marketRouter} from "./routes/market"
+import http from "http"
 const app = express();
+const server = http.createServer(app)
 
 app.use(express.json());
 app.post("/reset",(req,res)=>{
     resetDB()
     res.status(200)
-})
+});
 app.get('/', (req, res) => {
     res.send("Options Trading App");
 });

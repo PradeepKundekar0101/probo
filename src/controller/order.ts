@@ -6,10 +6,12 @@ import {
   markets,
   ordersList,
   currentMarketPrice,
+  
 } from "../db";
-import { StockType } from "../types";
+
 import { catchAsync, sendResponse } from "../utils/api.util";
 import { generateOrderId } from "../utils/generateOrderId";
+import { StockType } from "../db/types";
 
 export const buyStock = catchAsync(async (req: Request, res: Response) => {
   let { userId, stockSymbol, quantity, price, stockType } = req.body;
@@ -41,7 +43,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       no: { quantity: 0, locked: 0 },
     };
   }
-  let availableStocks = quantity;
+  let availableStocks:number = quantity;
   let totalTradeQty = 0;
   const isLimitOrder =
     currentMarketPrice[stockSymbol][stockType as StockType] !== price;
@@ -56,7 +58,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
     for (const sellerId in orders) {
       if (availableStocks === 0) break;
       const sellerQuantity = orders[sellerId];
-      const tradeQuantity = Math.min(availableStocks, sellerQuantity);
+      const tradeQuantity = Number(Math.min(availableStocks, sellerQuantity));
       // Execute the trade
       totalTradeQty += tradeQuantity;
       availableStocks -= tradeQuantity;
@@ -126,7 +128,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       };
     } else {
       orderBook[stockSymbol]["buy"][stockType as StockType][price].total +=
-        price * quantity;
+         quantity;
       orderBook[stockSymbol]["buy"][stockType as StockType][price].orders[
         userId
       ] = quantity;

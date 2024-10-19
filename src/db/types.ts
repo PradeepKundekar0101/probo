@@ -60,12 +60,7 @@ export interface StockBalances {
     [stockSymbol: string]: StockBalance;
   };
 }
-export interface StockPool{
-  [stockSymbol:string]:{
-    no:number
-    yes:number,
-  } 
-}
+
 export interface OrderListItem{
   stockSymbol:string,
   stockType:string
@@ -78,3 +73,19 @@ export interface OrderListItem{
   totalPrice:number;
   status:"executed"|"pending"
 }
+
+
+export interface Market {
+  stockSymbol: string;
+  title: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  yes: number;
+  no: number;
+  result: StockType | null;
+}
+export interface Markets {
+  [stockSymbol:string]:Market 
+}
+export type StockType = 'yes' | 'no';

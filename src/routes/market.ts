@@ -1,9 +1,9 @@
 import express from "express"
 
-import { createMarket,settleMarket } from "../controller/market";
+import { createMarket,getMarketPrice,settleMarket } from "../controller/market";
 export const marketRouter = express.Router();
 
 marketRouter.post("/create",createMarket);
 marketRouter.post("/settleMarket",settleMarket);
-marketRouter.post("/getPrice/:marketId",settleMarket);
+marketRouter.get("/getPrice/:stockSymbol",getMarketPrice);
     

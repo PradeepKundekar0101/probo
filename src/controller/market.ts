@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import {  stockBalances, inrBalances, orderBook, markets, currentMarketPrice } from "../db";
-import { Market, StockType } from "../types";
+import { Market, StockType } from "../db/types";
 import { catchAsync, sendResponse } from "../utils/api.util";
+import calculateMarketPrice from "../utils/calculateMarketPrice";
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const {
     stockSymbol,
@@ -68,7 +69,7 @@ export const settleMarket = catchAsync(async (req: Request, res: Response) => {
       const losingStocks = userStocks[result === "yes" ? "no" : "yes"];
 
       if (winningStocks && winningStocks.quantity > 0) {
-        const payout = winningStocks.quantity * 1000; // 1000 paise = 10 INR
+        const payout = winningStocks.quantity * 1000; 
         if (!inrBalances[userId]) {
           inrBalances[userId] = { balance: 0, locked: 0 };
         }
@@ -83,13 +84,18 @@ export const settleMarket = catchAsync(async (req: Request, res: Response) => {
   delete orderBook[stockSymbol];
   res.status(200).json({ data: "done" });
 });
+
+
 export const getMarketPrice = catchAsync(async (req: Request, res: Response) => {
-  const { stockSymbol } = req.body;
+  const { stockSymbol } = req.params;
+  console.log(markets)
+  console.log(stockSymbol)
   if (!markets[stockSymbol]) {
-    return sendResponse(res,404,"market not found")
+    return sendResponse(res, 404, "Market not found");
   }
-  if(!currentMarketPrice[stockSymbol])
-    return sendResponse(res,404,"market price not found")
-  return sendResponse(res,200,currentMarketPrice[stockSymbol])
   
+  const marketPrice = calculateMarketPrice(stockSymbol, orderBook);
+  currentMarketPrice[stockSymbol] = marketPrice;
+  
+  return sendResponse(res, 200, marketPrice);
 });
