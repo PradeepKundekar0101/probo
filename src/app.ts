@@ -7,9 +7,7 @@ import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import { resetDB } from "./utils/resetDB";
 import {marketRouter} from "./routes/market"
-import http from "http"
 const app = express();
-const server = http.createServer(app)
 
 app.use(express.json());
 app.post("/reset",(req,res)=>{
@@ -25,5 +23,6 @@ app.use('/onramp', onrampRouter);
 app.use('/orderbook', orderBookRouter);
 app.use('/order', orderRouter);
 app.use('/market', marketRouter);
+
 
 export default app;
