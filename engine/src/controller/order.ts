@@ -6,12 +6,12 @@ import {
   markets,
   ordersList,
   currentMarketPrice,
-  
 } from "../db";
 
 import { catchAsync, sendResponse } from "../utils/api.util";
 import { generateOrderId } from "../utils/generateOrderId";
 import { StockType } from "../db/types";
+import { rooms } from "..";
 
 export const buyStock = catchAsync(async (req: Request, res: Response) => {
   let { userId, stockSymbol, quantity, price, stockType } = req.body;
@@ -43,7 +43,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       no: { quantity: 0, locked: 0 },
     };
   }
-  let availableStocks:number = quantity;
+  let availableStocks: number = quantity;
   let totalTradeQty = 0;
   const isLimitOrder =
     currentMarketPrice[stockSymbol][stockType as StockType] !== price;
@@ -64,30 +64,19 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       availableStocks -= tradeQuantity;
       // Update seller's balances
       inrBalances[sellerId].balance += tradeQuantity * price;
-      stockBalances[sellerId][stockSymbol][stockType as StockType].locked -=
-        tradeQuantity;
+      stockBalances[sellerId][stockSymbol][stockType as StockType].locked -= tradeQuantity;
       // Update buyer's stock balance
-      stockBalances[userId][stockSymbol][stockType as StockType].quantity +=
-        tradeQuantity;
+      stockBalances[userId][stockSymbol][stockType as StockType].quantity += tradeQuantity;
       // Update orderbook
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].total -=
-        tradeQuantity;
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-        sellerId
-      ] -= tradeQuantity;
-      if (
-        orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-          sellerId
-        ] === 0
-      ) {
-        delete orderBook[stockSymbol]["sell"][stockType as StockType][price]
-          .orders[sellerId];
+      orderBook[stockSymbol]["sell"][stockType as StockType][price].total -= tradeQuantity;
+      orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId] -= tradeQuantity;
+      if ( orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId] === 0)
+      {
+        delete orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId];
       }
     }
 
-    if (
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].total === 0
-    ) {
+    if (orderBook[stockSymbol]["sell"][stockType as StockType][price].total === 0) {
       delete orderBook[stockSymbol]["sell"][stockType as StockType][price];
     }
   }
@@ -128,7 +117,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       };
     } else {
       orderBook[stockSymbol]["buy"][stockType as StockType][price].total +=
-         quantity;
+        quantity;
       orderBook[stockSymbol]["buy"][stockType as StockType][price].orders[
         userId
       ] = quantity;
@@ -147,13 +136,17 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
     orderType: "buy",
     status: "executed",
   });
+  const clients = rooms.get(stockSymbol);
+  clients?.forEach((client) => {
+    client.send(JSON.stringify(orderBook));
+  });
   return sendResponse(res, 200, {
     message: "Buy order processed successfully",
   });
 });
 
 export const sellStock = catchAsync(async (req: Request, res: Response) => {
-  let { userId:sellerId, stockSymbol, quantity, price, stockType } = req.body;
+  let { userId: sellerId, stockSymbol, quantity, price, stockType } = req.body;
   quantity = Number(quantity);
   price = Number(price);
   if (
@@ -227,8 +220,8 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
     availableStocks;
   stockBalances[sellerId][stockSymbol][stockType as StockType].locked +=
     availableStocks;
-  console.log(availableStocks)
-  if(availableStocks>0){
+  console.log(availableStocks);
+  if (availableStocks > 0) {
     if (!orderBook[stockSymbol]["sell"][stockType as StockType][price]) {
       orderBook[stockSymbol]["sell"][stockType as StockType][price] = {
         total: availableStocks,
@@ -246,7 +239,7 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
   }
   ordersList.push({
     id: generateOrderId(),
-    userId:sellerId,
+    userId: sellerId,
     price,
     createdAt: new Date(),
     quantity: availableStocks,

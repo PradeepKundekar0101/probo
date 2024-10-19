@@ -2,8 +2,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import app from "./app";
 
 const PORT = process.env.PORT || 8000;
-const wss = new WebSocketServer({ noServer: true });
-const rooms = new Map<string, Set<WebSocket>>(); // Store room clients
+export const wss = new WebSocketServer({ noServer: true });
+export const rooms = new Map<string, Set<WebSocket>>(); 
 
 const joinRoom = (room: string, ws: WebSocket) => {
   if (!rooms.has(room)) rooms.set(room, new Set());
@@ -67,7 +67,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     rooms.forEach((clients, room) => {
       clients.delete(ws);
-      if (clients.size === 0) rooms.delete(room); // Delete empty room
+      if (clients.size === 0) rooms.delete(room); 
     });
     console.log("WebSocket connection closed.");
   });

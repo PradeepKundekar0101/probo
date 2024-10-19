@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ordersList = exports.markets = exports.marketMakerId = exports.orderBook = exports.currentMarketPrice = exports.stockBalances = exports.inrBalances = void 0;
+exports.inrBalances = {};
+exports.stockBalances = {};
+exports.currentMarketPrice = {};
+exports.orderBook = {};
+exports.marketMakerId = 'marketMaker';
+exports.markets = {};
+exports.ordersList = [];
