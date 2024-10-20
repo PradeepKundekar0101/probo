@@ -5,14 +5,27 @@ import {
   orderBook,
   markets,
   ordersList,
-  currentMarketPrice,
+  currentMarketPrice
 } from "../db";
 
 import { catchAsync, sendResponse } from "../utils/api.util";
 import { generateOrderId } from "../utils/generateOrderId";
 import { StockType } from "../db/types";
-import { rooms } from "..";
 
+function updateCurrentMarketPrice(stockSymbol: string, stockType: StockType, price: number) {
+  if (!currentMarketPrice[stockSymbol]) {
+    currentMarketPrice[stockSymbol] = { yes: 0, no: 0 };
+  } 
+  if(stockType=="yes"){
+    currentMarketPrice[stockSymbol]["yes"] = price;
+    currentMarketPrice[stockSymbol]["no"] = 10 - price;
+  }
+  else{
+    currentMarketPrice[stockSymbol]["yes"] = 10 - price;
+    currentMarketPrice[stockSymbol]["no"] = price;
+  }
+
+}
 interface RequestBody {
   userId: string;
   stockSymbol: string;
@@ -158,6 +171,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       inrBalances[buyerId].locked+=leftOverStockAfterReverseMatching*price;
       orderBook[stockSymbol].reverse[stockType][price].mint.remainingQty-=leftOverStockAfterReverseMatching
     }
+    updateCurrentMarketPrice(stockSymbol,stockType,price)
     return sendResponse(res,200,`${ quantity - availableStocks} bought directly and ${availableStocks} in pending`)
   }
  
@@ -185,7 +199,7 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
     type:"buy"
   })
     orderBook[stockSymbol].reverse[reverseStockType][reversePrice].mint.remainingQty+=leftOverStockAfterReverseMatching
-  
+  updateCurrentMarketPrice(stockSymbol,stockType,price)
   return sendResponse(res, 200, {
     message: "Buy order processed successfully",
   });
@@ -237,6 +251,7 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
       // Update orderbook
       orderBook[stockSymbol].direct[stockType][price].total -= tradeQuantity;
       orderBook[stockSymbol].direct[stockType][price].orders[buyerId] -= tradeQuantity;
+      updateCurrentMarketPrice(stockSymbol,stockType,price)
       if (orderBook[stockSymbol].direct[stockType][price].orders[buyerId] === 0) {
         delete orderBook[stockSymbol].direct[stockType][price].orders[buyerId];
       }
@@ -248,7 +263,7 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
   //Lock the user's stock balance
   stockBalances[sellerId][stockSymbol][stockType as StockType].quantity -= availableStocks;
   stockBalances[sellerId][stockSymbol][stockType as StockType].locked += availableStocks;
-  console.log(availableStocks);
+
   if (availableStocks > 0) {
     if (!orderBook[stockSymbol].direct[stockType as StockType][price]) {
       orderBook[stockSymbol].direct[stockType as StockType][price] = {
@@ -301,13 +316,6 @@ export const cancelOrder = catchAsync(async (req: Request, res: Response) => {
   return sendResponse(res, 200, { message: "Order cancelled" });
 });
 
-export const mintNewTokens = (
-  stockSymbol: string,
-  stockType: string,
-  quantity: number
-) => {
-  markets[stockSymbol][stockType as StockType] += quantity;
-};
 
 export const getOrderByUserId = catchAsync(
   async (req: Request, res: Response) => {

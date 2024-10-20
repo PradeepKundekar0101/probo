@@ -8,7 +8,7 @@ import { orderRouter } from "./routes/order";
 import { resetDB } from "./utils/resetDB";
 import {marketRouter} from "./routes/market"
 import {inrBalances, stockBalances} from "./db/index"
-import { createMarket } from "./controller/market";
+
 const app = express();
 
 app.use(express.json());
