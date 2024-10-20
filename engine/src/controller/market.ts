@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import {  stockBalances, inrBalances, orderBook, markets, currentMarketPrice } from "../db";
 import { Market, StockType } from "../db/types";
 import { catchAsync, sendResponse } from "../utils/api.util";
-import calculateMarketPrice from "../utils/calculateMarketPrice";
+// import calculateMarketPrice from "../utils/calculateMarketPrice";
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const {
     stockSymbol,
@@ -30,13 +30,14 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
   };
   markets[stockSymbol] = market;
   orderBook[stockSymbol] = {
-    buy:{
+    direct: {
       yes: {},
-      no: {},
+      no: {}
     },
-    sell:{
+    reverse: {
       yes: {},
       no: {},
+      
     }
   };
   currentMarketPrice[stockSymbol]={
@@ -86,16 +87,16 @@ export const settleMarket = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-export const getMarketPrice = catchAsync(async (req: Request, res: Response) => {
-  const { stockSymbol } = req.params;
-  console.log(markets)
-  console.log(stockSymbol)
-  if (!markets[stockSymbol]) {
-    return sendResponse(res, 404, "Market not found");
-  }
+// export const getMarketPrice = catchAsync(async (req: Request, res: Response) => {
+//   const { stockSymbol } = req.params;
+//   console.log(markets)
+//   console.log(stockSymbol)
+//   if (!markets[stockSymbol]) {
+//     return sendResponse(res, 404, "Market not found");
+//   }
   
-  const marketPrice = calculateMarketPrice(stockSymbol, orderBook);
-  currentMarketPrice[stockSymbol] = marketPrice;
+//   const marketPrice = calculateMarketPrice(stockSymbol, orderBook);
+//   currentMarketPrice[stockSymbol] = marketPrice;
   
-  return sendResponse(res, 200, marketPrice);
-});
+//   return sendResponse(res, 200, marketPrice);
+// });

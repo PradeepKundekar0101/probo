@@ -7,6 +7,8 @@ import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import { resetDB } from "./utils/resetDB";
 import {marketRouter} from "./routes/market"
+import {inrBalances, stockBalances} from "./db/index"
+import { createMarket } from "./controller/market";
 const app = express();
 
 app.use(express.json());
@@ -23,6 +25,15 @@ app.use('/onramp', onrampRouter);
 app.use('/orderbook', orderBookRouter);
 app.use('/order', orderRouter);
 app.use('/market', marketRouter);
+
+inrBalances["pradeep"] = {
+    locked:0,
+    balance:100000
+}
+inrBalances["sahil"] = {
+    locked:0,
+    balance:100000
+}
 
 
 export default app;

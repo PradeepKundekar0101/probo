@@ -13,12 +13,23 @@ import { generateOrderId } from "../utils/generateOrderId";
 import { StockType } from "../db/types";
 import { rooms } from "..";
 
+interface RequestBody {
+  userId: string;
+  stockSymbol: string;
+  quantity: string | number;
+  price: string | number;
+  stockType: StockType; 
+}
 export const buyStock = catchAsync(async (req: Request, res: Response) => {
-  let { userId, stockSymbol, quantity, price, stockType } = req.body;
-  quantity = Number(quantity);
-  price = Number(price);
+  const reqBody: RequestBody = req.body;
+  const buyerId: string = reqBody.userId;
+  const stockSymbol: string = reqBody.stockSymbol;
+  const quantity: number = Number(reqBody.quantity);
+  const price: number = Number(reqBody.price);
+  const stockType: StockType = reqBody.stockType as StockType;
+
   if (
-    !userId ||
+    !buyerId ||
     !stockSymbol ||
     !quantity ||
     price === undefined ||
@@ -30,30 +41,28 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
     return sendResponse(res, 404, "Market not found");
   }
   const totalCost = quantity * price;
-
-  if (!inrBalances[userId] || inrBalances[userId].balance < totalCost) {
+  
+  if (!inrBalances[buyerId] || inrBalances[buyerId].balance < totalCost) {
     return sendResponse(res, 400, "Insufficient INR balance");
   }
-  if (!stockBalances[userId]) {
-    stockBalances[userId] = {};
+  if (!stockBalances[buyerId]) {
+    stockBalances[buyerId] = {};
   }
-  if (!stockBalances[userId][stockSymbol]) {
-    stockBalances[userId][stockSymbol] = {
+  if (!stockBalances[buyerId][stockSymbol]) {
+    stockBalances[buyerId][stockSymbol] = {
       yes: { quantity: 0, locked: 0 },
       no: { quantity: 0, locked: 0 },
     };
   }
   let availableStocks: number = quantity;
   let totalTradeQty = 0;
-  const isLimitOrder =
-    currentMarketPrice[stockSymbol][stockType as StockType] !== price;
 
   if (
-    orderBook[stockSymbol]["sell"][stockType as StockType][price] &&
-    orderBook[stockSymbol]["sell"][stockType as StockType][price].total > 0
-  ) {
-    const orders =
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].orders;
+    orderBook[stockSymbol]["direct"][stockType][price] &&
+    orderBook[stockSymbol]["direct"][stockType][price].total > 0
+  )
+  {
+    const orders = orderBook[stockSymbol]["direct"][stockType][price].orders;
 
     for (const sellerId in orders) {
       if (availableStocks === 0) break;
@@ -66,102 +75,135 @@ export const buyStock = catchAsync(async (req: Request, res: Response) => {
       inrBalances[sellerId].balance += tradeQuantity * price;
       stockBalances[sellerId][stockSymbol][stockType as StockType].locked -= tradeQuantity;
       // Update buyer's stock balance
-      stockBalances[userId][stockSymbol][stockType as StockType].quantity += tradeQuantity;
+      stockBalances[buyerId][stockSymbol][stockType as StockType].quantity += tradeQuantity;
       // Update orderbook
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].total -= tradeQuantity;
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId] -= tradeQuantity;
-      if ( orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId] === 0)
+      orderBook[stockSymbol]["direct"][stockType][price].total -= tradeQuantity;
+      orderBook[stockSymbol]["direct"][stockType][price].orders[sellerId] -= tradeQuantity;
+      if ( orderBook[stockSymbol]["direct"][stockType][price].orders[sellerId] === 0)
       {
-        delete orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[sellerId];
+        delete orderBook[stockSymbol]["direct"][stockType as StockType][price].orders[sellerId];
       }
     }
-
-    if (orderBook[stockSymbol]["sell"][stockType as StockType][price].total === 0) {
-      delete orderBook[stockSymbol]["sell"][stockType as StockType][price];
+    if (orderBook[stockSymbol]["direct"][stockType][price].total === 0)
+    {
+      delete orderBook[stockSymbol]["direct"][stockType][price];
     }
   }
-  if (availableStocks > 0) {
-    if (isLimitOrder) {
-      stockBalances[userId][stockSymbol][stockType as StockType].quantity +=
-        totalTradeQty;
-      inrBalances[userId].locked += availableStocks * price;
-    } else {
-      stockBalances[userId][stockSymbol][stockType as StockType].quantity +=
-        availableStocks;
+  //settle the buyer
+  // inrBalances[buyerId].locked += availableStocks * price
+  if(availableStocks===0){
+    inrBalances[buyerId].balance -= totalTradeQty * price;
+    return sendResponse(res,200,`${totalTradeQty} qty traded directly`)
+  }
+  //now let's satisfy the pending reverse orders
+  let leftOverStockAfterReverseMatching = availableStocks;
+  const reverseStockType = stockType =="no"?"yes":"no"
+  const reversePrice  = 1000 - price
+  if (
+    orderBook[stockSymbol].reverse[stockType] && 
+    orderBook[stockSymbol].reverse[stockType][price] &&
+    orderBook[stockSymbol]["reverse"][stockType][price].mint.remainingQty > 0
+  ){
+    const remainingQty = orderBook[stockSymbol].reverse[stockType][price].mint.remainingQty;
+    const participants = orderBook[stockSymbol].reverse[stockType][price].mint.participants;
+    if(leftOverStockAfterReverseMatching>=remainingQty){
+        participants.forEach((p)=>{
+          const stockTypeToAdd = p.type=="buy"? stockType==="no"?"yes":"no":stockType
+          if(p.type=="buy"){
+            inrBalances[p.userId].locked-= (p.price * p.quantity)
+            stockBalances[p.userId][stockSymbol][stockTypeToAdd].quantity+= p.quantity
+          }else{
+            inrBalances[p.userId].balance+= ((price) * p.quantity)
+            stockBalances[p.userId][stockSymbol][stockTypeToAdd].quantity+= p.quantity
+          }
+        })
+        inrBalances[buyerId].balance-= remainingQty * price
+        stockBalances[buyerId][stockSymbol][stockType].quantity+=remainingQty
+        delete orderBook[stockSymbol].reverse[stockType][price]
+        const stillLeft = leftOverStockAfterReverseMatching-remainingQty
+        if(stillLeft>0){
+          if (!orderBook[stockSymbol].reverse[reverseStockType])
+            orderBook[stockSymbol].reverse[reverseStockType] = {  };
+          if (!orderBook[stockSymbol].reverse[reverseStockType][reversePrice])
+          {
+            orderBook[stockSymbol].reverse[reverseStockType][reversePrice] = {
+              total:0,
+              mint: {
+                participants: [],
+                remainingQty: 0
+              }
+            };
+          } 
+          orderBook[stockSymbol].reverse[reverseStockType][reversePrice].total+=stillLeft;
+          inrBalances[buyerId].locked+=stillLeft*price;
+          inrBalances[buyerId].balance-=stillLeft*price;
+          orderBook[stockSymbol].reverse[reverseStockType][reversePrice].mint.participants.push({
+            userId:buyerId,
+            quantity:stillLeft,
+            price:price,
+            type:"buy"
+          })
+          orderBook[stockSymbol].reverse[reverseStockType][reversePrice].mint.remainingQty+=stillLeft
+        }
+    }
+    else
+    {
+      orderBook[stockSymbol].reverse[stockType][price].mint.participants.push({
+        userId:buyerId,
+        quantity:leftOverStockAfterReverseMatching,
+        price:price,
+        type:"sell"
+      })
+      
+      inrBalances[buyerId].locked+=leftOverStockAfterReverseMatching*price;
+      orderBook[stockSymbol].reverse[stockType][price].mint.remainingQty-=leftOverStockAfterReverseMatching
+    }
+    return sendResponse(res,200,`${ quantity - availableStocks} bought directly and ${availableStocks} in pending`)
+  }
+ 
 
-      if (availableStocks > markets[stockSymbol][stockType as StockType]) {
-        mintNewTokens(
-          stockSymbol,
-          stockType,
-          availableStocks - markets[stockSymbol][stockType as StockType]
-        );
+  if (!orderBook[stockSymbol].reverse[reverseStockType])
+      orderBook[stockSymbol].reverse[reverseStockType] = {  };
+
+  if (!orderBook[stockSymbol].reverse[reverseStockType][reversePrice])
+  {
+    orderBook[stockSymbol].reverse[reverseStockType][reversePrice] = {
+      total:0,
+      mint: {
+        participants: [],
+        remainingQty: 0
       }
-
-      markets[stockSymbol][stockType as StockType] -= availableStocks;
-    }
-  }
-  inrBalances[userId].balance -= totalCost;
-  if (isLimitOrder) {
-    if (!orderBook[stockSymbol]["buy"]) {
-      orderBook[stockSymbol]["buy"] = {
-        yes: {},
-        no: {},
-      };
-    }
-    if (!orderBook[stockSymbol]["buy"][stockType as StockType][price]) {
-      orderBook[stockSymbol]["buy"][stockType as StockType][price] = {
-        total: quantity,
-        orders: {
-          [userId]: quantity,
-        },
-      };
-    } else {
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].total +=
-        quantity;
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].orders[
-        userId
-      ] = quantity;
-    }
-  }
-
-  ordersList.push({
-    id: generateOrderId(),
-    userId,
-    price,
-    createdAt: new Date(),
-    quantity,
-    stockSymbol,
-    stockType,
-    totalPrice: price * quantity,
-    orderType: "buy",
-    status: "executed",
-  });
-  const clients = rooms.get(stockSymbol);
-  clients?.forEach((client) => {
-    client.send(JSON.stringify(orderBook));
-  });
+    };
+  } 
+  orderBook[stockSymbol].reverse[reverseStockType][reversePrice].total+=leftOverStockAfterReverseMatching;
+  inrBalances[buyerId].locked+=leftOverStockAfterReverseMatching*price;
+  inrBalances[buyerId].balance-=leftOverStockAfterReverseMatching*price;
+  orderBook[stockSymbol].reverse[reverseStockType][reversePrice].mint.participants.push({
+    userId:buyerId,
+    quantity:leftOverStockAfterReverseMatching,
+    price:price,
+    type:"buy"
+  })
+    orderBook[stockSymbol].reverse[reverseStockType][reversePrice].mint.remainingQty+=leftOverStockAfterReverseMatching
+  
   return sendResponse(res, 200, {
     message: "Buy order processed successfully",
   });
 });
 
 export const sellStock = catchAsync(async (req: Request, res: Response) => {
-  let { userId: sellerId, stockSymbol, quantity, price, stockType } = req.body;
-  quantity = Number(quantity);
-  price = Number(price);
-  if (
-    !sellerId ||
-    !stockSymbol ||
-    !quantity ||
-    price === undefined ||
-    !stockType
-  ) {
-    return sendResponse(res, 400, "Missing parameters");
-  }
+  const reqBody: RequestBody = req.body;
+  const sellerId: string = reqBody.userId;
+  const stockSymbol: string = reqBody.stockSymbol;
+  const quantity: number = Number(reqBody.quantity);
+  const price: number = Number(reqBody.price);
+  const stockType: StockType = reqBody.stockType as StockType;
 
-  if (!orderBook[stockSymbol]) {
+  if ( !sellerId || !stockSymbol || !quantity || price === undefined || !stockType)
+    return sendResponse(res, 400, "Missing parameters");
+
+  if (!orderBook[stockSymbol]) 
     return res.status(404).json({ error: "Market not found" });
-  }
 
   if (
     !stockBalances[sellerId] ||
@@ -174,12 +216,10 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
   let availableStocks = quantity;
   let totalTradeQty = 0;
   if (
-    orderBook[stockSymbol]["buy"][stockType as StockType][price] &&
-    orderBook[stockSymbol]["buy"][stockType as StockType][price].total > 0
+    orderBook[stockSymbol].direct[stockType][price] &&
+    orderBook[stockSymbol].direct[stockType][price].total > 0
   ) {
-    const orders =
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].orders;
-
+    const orders = orderBook[stockSymbol].direct[stockType][price].orders;
     for (const buyerId in orders) {
       if (availableStocks === 0) break;
       const sellerQuantity = orders[buyerId];
@@ -195,46 +235,31 @@ export const sellStock = catchAsync(async (req: Request, res: Response) => {
       stockBalances[sellerId][stockSymbol][stockType as StockType].quantity -=
         tradeQuantity;
       // Update orderbook
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].total -=
-        tradeQuantity;
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].orders[
-        buyerId
-      ] -= tradeQuantity;
-      if (
-        orderBook[stockSymbol]["buy"][stockType as StockType][price].orders[
-          buyerId
-        ] === 0
-      ) {
-        delete orderBook[stockSymbol]["buy"][stockType as StockType][price]
-          .orders[buyerId];
+      orderBook[stockSymbol].direct[stockType][price].total -= tradeQuantity;
+      orderBook[stockSymbol].direct[stockType][price].orders[buyerId] -= tradeQuantity;
+      if (orderBook[stockSymbol].direct[stockType][price].orders[buyerId] === 0) {
+        delete orderBook[stockSymbol].direct[stockType][price].orders[buyerId];
       }
     }
-    if (
-      orderBook[stockSymbol]["buy"][stockType as StockType][price].total === 0
-    ) {
-      delete orderBook[stockSymbol]["buy"][stockType as StockType][price];
+    if ( orderBook[stockSymbol].direct[stockType][price].total === 0) {
+      delete orderBook[stockSymbol].direct[stockType][price];
     }
   }
   //Lock the user's stock balance
-  stockBalances[sellerId][stockSymbol][stockType as StockType].quantity -=
-    availableStocks;
-  stockBalances[sellerId][stockSymbol][stockType as StockType].locked +=
-    availableStocks;
+  stockBalances[sellerId][stockSymbol][stockType as StockType].quantity -= availableStocks;
+  stockBalances[sellerId][stockSymbol][stockType as StockType].locked += availableStocks;
   console.log(availableStocks);
   if (availableStocks > 0) {
-    if (!orderBook[stockSymbol]["sell"][stockType as StockType][price]) {
-      orderBook[stockSymbol]["sell"][stockType as StockType][price] = {
+    if (!orderBook[stockSymbol].direct[stockType as StockType][price]) {
+      orderBook[stockSymbol].direct[stockType as StockType][price] = {
         total: availableStocks,
         orders: {
           [sellerId]: availableStocks,
         },
       };
     } else {
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].total +=
-        availableStocks;
-      orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-        sellerId
-      ] += availableStocks;
+      orderBook[stockSymbol].direct[stockType as StockType][price].total += availableStocks;
+      orderBook[stockSymbol].direct[stockType as StockType][price].orders[sellerId] += availableStocks;
     }
   }
   ordersList.push({
@@ -264,19 +289,12 @@ export const cancelOrder = catchAsync(async (req: Request, res: Response) => {
   }
   const { userId, price, stockSymbol, stockType, quantity, totalPrice } =
     order[0];
-  orderBook[stockSymbol]["sell"][stockType as StockType][price].total -=
-    totalPrice;
-  orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-    userId
-  ] -= totalPrice;
+  orderBook[stockSymbol].direct[stockType as StockType][price].total -= totalPrice;
+  orderBook[stockSymbol].direct[stockType as StockType][price].orders[userId] -= totalPrice;
   if (
-    orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-      userId
-    ] === 0
+    orderBook[stockSymbol].direct[stockType as StockType][price].orders[userId] === 0
   ) {
-    delete orderBook[stockSymbol]["sell"][stockType as StockType][price].orders[
-      userId
-    ];
+    delete orderBook[stockSymbol].direct[stockType as StockType][price].orders[userId];
   }
   const index = ordersList.findIndex((order) => order.id === orderId);
   ordersList.splice(index, 1);

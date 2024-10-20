@@ -1,4 +1,3 @@
-
 export interface UserBalance {
   balance: number;
   locked: number;
@@ -12,27 +11,6 @@ export interface OrderEntry {
   total: number;
   orders: {
     [userId: string]: number;
-  };
-}
-
-export interface OrderBook {
-  [symbol: string]: {
-    buy:{
-      yes: {
-        [price: number]: OrderEntry;
-      };
-      no: {
-        [price: number]: OrderEntry;
-      };
-    },
-    sell:{
-      yes: {
-        [price: number]: OrderEntry;
-      };
-      no: {
-        [price: number]: OrderEntry;
-      };
-    }
   };
 }
 
@@ -61,19 +39,18 @@ export interface StockBalances {
   };
 }
 
-export interface OrderListItem{
-  stockSymbol:string,
-  stockType:string
-  createdAt:Date,
-  userId:string,
-  quantity:number,
-  price:number,
-  id:string,
-  orderType:string,
-  totalPrice:number;
-  status:"executed"|"pending"
+export interface OrderListItem {
+  stockSymbol: string;
+  stockType: string;
+  createdAt: Date;
+  userId: string;
+  quantity: number;
+  price: number;
+  id: string;
+  orderType: string;
+  totalPrice: number;
+  status: "executed" | "pending";
 }
-
 
 export interface Market {
   stockSymbol: string;
@@ -86,6 +63,50 @@ export interface Market {
   result: StockType | null;
 }
 export interface Markets {
-  [stockSymbol:string]:Market 
+  [stockSymbol: string]: Market;
 }
-export type StockType = 'yes' | 'no';
+export type StockType = "yes" | "no";
+
+export interface OrderBook {
+  [symbol: string]: {
+    reverse: {
+      yes: {
+        [price: number]: {
+          mint: {
+            participants: {
+              price:number;
+              userId: string;
+              quantity: number;
+              type: "buy" | "sell";
+            }[];
+            remainingQty: number;
+          };
+          total: number;
+        };
+      };
+      no: {
+        [price: number]: {
+          mint: {
+            participants: {
+              price:number;
+              userId: string;
+              quantity: number;
+
+              type: "buy" | "sell";
+            }[];
+            remainingQty: number;
+          };
+          total: number;
+        };
+      };
+    };
+    direct: {
+      yes: {
+        [price: number]: OrderEntry;
+      };
+      no: {
+        [price: number]: OrderEntry;
+      };
+    };
+  };
+}
