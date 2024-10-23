@@ -1,7 +1,12 @@
-import {  Response,Request } from "express";
-import { catchAsync, sendResponse } from "../utils/api.util";
-import {orderBook} from "../db"
-
-export const getOrderBook = catchAsync(async(req:Request,res:Response)=>{
-    return sendResponse(res,200,{data:orderBook})
-})
+import {  orderBook } from "../db"
+import { message, publishMessage } from "../utils/publishResponse"
+export const getOrderBook = async (eventId:string)=>{
+    try
+    {
+        publishMessage(message(200,"Success",orderBook),eventId)
+    }
+    catch (error:any)
+    {
+        publishMessage(message(500,"An Error occured",{error:error.message}),eventId)
+    }
+}

@@ -1,5 +1,5 @@
 import express from "express"
-import { getBalance, getBalanceAll, getStockBalance,getStockBalanceAll } from "../controller/balance";
+import { getBalance, getBalanceAll, getStockBalance,getStockBalanceAll } from "../controller1/balance";
 
 export const balanceRouter = express.Router();
 

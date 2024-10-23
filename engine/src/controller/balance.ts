@@ -1,38 +1,38 @@
-import { Response, Request } from "express";
-import { catchAsync, sendResponse } from "../utils/api.util";
-import { inrBalances, stockBalances } from "../db";
-import AppError from "../utils/AppError";
+import { inrBalances, stockBalances } from "../db"
+import { message, publishMessage } from "../utils/publishResponse"
 
-export const getBalance = catchAsync(async (req: Request, res: Response) => {
-  const balance = inrBalances;
-  const userId = req.params.userId;
-  if (!balance[userId]) {
-    throw new AppError(404, "User not found");
-  }
-  return sendResponse(res, 200, { data: balance[userId] });
-});
-
-export const getBalanceAll = catchAsync(async (req: Request, res: Response) => {
-  const balance = inrBalances;
-  return sendResponse(res, 200, { data: balance });
-});
-export const getStockBalance = catchAsync(
-  async (req: Request, res: Response) => {
-    const balance = stockBalances;
-    const userId = req.params.userId;
-    if (!inrBalances[userId]) {
-      return sendResponse(res, 404, { data: "User not found" });
+export const getInrBalanceAll = async (eventId:string)=>{
+    try {
+        publishMessage(message(200,"Success",inrBalances),eventId)
+    } catch (error) {
+        console.log(error)   
     }
-    if (!balance[userId]) {
-      return sendResponse(res, 200, { data: {} });
+}
+export const getInrBalanceByUserId = async (userId:string,eventId:string)=>{
+    try {
+        if(!inrBalances[userId])
+            return publishMessage(message(404,`${userId} does not exist`,null),eventId)
+        publishMessage(message(200,"Success",inrBalances[userId]),eventId)
+    } catch (error) {
+        console.log(error)
     }
-    return sendResponse(res, 200, { data: balance[userId] });
-  }
-);
-export const getStockBalanceAll = catchAsync(
-  async (req: Request, res: Response) => {
-    const balance = stockBalances;
+}
 
-    return sendResponse(res, 200, { data: balance });
-  }
-);
+
+export const getStockBalanceAll = async (eventId:string)=>{
+    try {
+        publishMessage(message(200,"Success",stockBalances),eventId)
+    } catch (error) {
+        console.log(error)
+    }
+}
+export const getStockBalanceByUserId = async (userId:string,eventId:string)=>{
+    try {
+        console.log(userId)
+        if(!stockBalances[userId])
+            return publishMessage(message(404,`${userId} does not exist`,null),eventId)
+        publishMessage(message(200,"Success",stockBalances[userId]),eventId)
+    } catch (error) {
+        console.log(error)
+    }
+}

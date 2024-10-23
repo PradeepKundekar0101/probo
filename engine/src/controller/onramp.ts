@@ -1,19 +1,17 @@
-import { Response, Request } from "express";
-import { catchAsync, sendResponse } from "../utils/api.util";
-import { inrBalances } from "../db";
-import AppError from "../utils/AppError";
-
-export const onrampInr = catchAsync(async (req: Request, res: Response) => {
-  const { userId, amount } = req.body;
-  const balance = inrBalances;
-  if (!balance[userId]) {
-    sendResponse(res, 404, { data: "User not found" });
-  }
-  const amount_Rs = amount / 1000;
-  if (amount_Rs < 0) throw new AppError(400, "Invalid amount");
-  balance[userId].balance += amount;
-  return sendResponse(res, 200, {
-    message: `${amount_Rs} added successfully`,
-    data: balance[userId],
-  });
-});
+import { inrBalances } from "../db"
+import { message, publishMessage } from "../utils/publishResponse"
+export const onRamp = async (data:{userId:string,amount:number},eventId:string)=>{
+    try
+    {
+        const {userId,amount} = data;
+        console.log(`Onramping Rs ${amount} to user ${userId}`)
+        if(!inrBalances[userId])
+            return publishMessage(message(404,`${userId} does not exist`,null),eventId)
+        inrBalances[userId].balance+=amount;
+        publishMessage(message(200,"Succesfully Onramped Rs"+amount,inrBalances[userId]),eventId)
+    }
+    catch (error:any)
+    {
+        publishMessage(message(500,"An Error occured",{error:error.message}),eventId)
+    }
+}

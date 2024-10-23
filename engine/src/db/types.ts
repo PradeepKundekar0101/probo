@@ -58,8 +58,7 @@ export interface Market {
   description: string;
   startTime: Date;
   endTime: Date;
-  yes: number;
-  no: number;
+
   result: StockType | null;
 }
 export interface Markets {

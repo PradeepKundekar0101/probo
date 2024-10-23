@@ -1,74 +1,80 @@
-import { WebSocketServer, WebSocket } from "ws";
-import app from "./app";
+import express from "express";
+import http from "http";
+import WebSocket from "ws";
+import { broadCastMessage } from "./utils/ws";
+import Redis from "ioredis";
+import { processMessages } from "./app";
 
-const PORT = process.env.PORT || 8000;
-export const wss = new WebSocketServer({ noServer: true });
-export const rooms = new Map<string, Set<WebSocket>>(); 
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({
+  server
+});
+export const rooms = new Map<string, Set<WebSocket>>();
+export const redis = new Redis({ port: 6379, host: "localhost" });
 
-const joinRoom = (room: string, ws: WebSocket) => {
+
+export const joinRoom = (room: string, ws: WebSocket) => {
   if (!rooms.has(room)) rooms.set(room, new Set());
-  rooms.get(room)!.add(ws); 
+  rooms.get(room)!.add(ws);
+  console.log("Added to room");
+  console.log(rooms);
 };
 
-const broadCastMessage = (room: string, message: string) => {
-  const clients = rooms.get(room);
-  if (clients) {
-    clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  }
-};
-
-const server = app.listen(PORT, () => {
-  console.log(`Server running at port ${PORT}`);
-});
-
-server.on("upgrade", (req, socket, head) => {
-  wss.handleUpgrade(req, socket, head, (ws) => {
-    wss.emit("connection", ws, req);
-  });
-});
-
-interface WsData {
-  event: "joinRoom" | "message";
-  room?: string;
-  message?: string;
-}
-
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WebSocket) => {
   console.log("New WebSocket connection!");
-
-  ws.on("message", (data, isBinary) => {
+    ws.send("Welcome to server")
+  ws.on("message", (data: WebSocket.Data,) => {
+    console.log("first")
+    let parsedData;
+   
     try {
-      const { event, room, message }: WsData = JSON.parse(data.toString());
-
-      if (event === "joinRoom" && room) {
-        joinRoom(room, ws);
-        console.log(`User joined room: ${room}`);
-        ws.send(`Joined ${room}`);
-      } else if (event === "message" && room && message) {
-        broadCastMessage(room, message);
-        ws.send(`Sent "${message}" to room ${room}`);
-      } else {
-        ws.send("Invalid event or missing room/message data.");
-      }
+      parsedData = JSON.parse(data.toString());
     } catch (error) {
       console.error("Failed to parse message:", error);
       ws.send("Error: Invalid message format.");
+      return;
+    }
+    
+    const { event, room, message } = parsedData;
+
+    if (event === "joinRoom" && room) {
+      console.log("Joining room" + room);
+      joinRoom(room, ws);
+      console.log(`User joined room: ${room}`);
+      ws.send(`Joined ${room}`);
+    } else if (event === "message" && room && message) {
+      broadCastMessage(room, message);
+      ws.send(`Sent "${message}" to room ${room}`);
+    } else {
+      ws.send("Invalid event or missing room/message data.");
     }
   });
 
   ws.on("error", (error) => {
-    console.error("WebSocket error:", error);
+    if (error instanceof RangeError && error.message.includes("Invalid WebSocket frame: RSV1 must be clear")) {
+      console.error("WebSocket RSV1 error. This might be due to a client/server mismatch or proxy interference.");
+      ws.close(1002, "Protocol error");
+    } else {
+      console.error("WebSocket error:", error);
+    }
   });
 
   ws.on("close", () => {
     rooms.forEach((clients, room) => {
       clients.delete(ws);
-      if (clients.size === 0) rooms.delete(room); 
+      if (clients.size === 0) rooms.delete(room);
     });
     console.log("WebSocket connection closed.");
   });
 });
+
+const pollQueue = async () => {
+  while (true) {
+    await processMessages();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+};
+
+pollQueue();
+server.listen(3000, () => { console.log("Listening at 3000") });

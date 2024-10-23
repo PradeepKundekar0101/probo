@@ -1,0 +1,89 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id     String @id @default(uuid())
+    userId String @unique @map("user_id")
+
+    inrBalances   InrBalance[]
+    stockBalances StockBalance[]
+    orderList     Order[]
+}
+
+model InrBalance {
+    id     Int    @id @default(autoincrement())
+    user   User   @relation(fields: [userId], references: [id])
+    userId String
+
+    balance Float
+    locked  Float
+}
+
+model StockSymbol {
+    stockSymbol String @id
+
+    stockBalances StockBalance[]
+    markets       Market[]
+    orders        Order[]
+}
+
+model StockBalance {
+    id          Int         @id @default(autoincrement())
+    user        User        @relation(fields: [userId], references: [id])
+    userId      String
+    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
+    symbol      String
+
+    yesQuantity Int
+    yesLocked   Int
+    noQuantity  Int
+    noLocked    Int
+}
+
+model Market {
+    id          Int         @id @default(autoincrement())
+    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
+    symbol      String
+
+    title       String
+    description String
+    startTime   DateTime
+    endTime     DateTime
+    yes         Int
+    no          Int
+    result      StockType?
+
+    @@map("markets")
+}
+
+model Order {
+    id          String      @id @default(uuid())
+    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
+    symbol      String
+    user        User        @relation(fields: [userId], references: [id])
+    userId      String
+
+    stockType  StockType
+    createdAt  DateTime    @default(now())
+    quantity   Int
+    price      Float
+    orderType  String
+    totalPrice Float
+    status     OrderStatus
+}
+
+enum StockType {
+    yes
+    no
+}
+
+enum OrderStatus {
+    executed
+    pending
+}
