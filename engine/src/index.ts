@@ -4,6 +4,8 @@ import WebSocket from "ws";
 import { broadCastMessage } from "./utils/ws";
 import Redis from "ioredis";
 import { processMessages } from "./app";
+import { settleMarket } from "./controller1/market";
+import { settleMarketsOnClose } from "./controller/settleMarket";
 
 const app = express();
 const server = http.createServer(app);
@@ -78,3 +80,7 @@ const pollQueue = async () => {
 
 pollQueue();
 server.listen(3000, () => { console.log("Listening at 3000") });
+
+setTimeout(()=>{
+  settleMarketsOnClose()
+},5000)
