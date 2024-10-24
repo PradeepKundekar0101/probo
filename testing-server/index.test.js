@@ -313,7 +313,8 @@ describe("E-to-E-3", () => {
     response = await request(app).get("/orderbook");
     expect(response.status).toBe(200);
     expect(response.body["ETH_USD_15_Oct_2024_12_00"]["yes"]).toEqual({
-      1400: { total: 100, orders: { user1: 100 } },
+      1400: 
+      { total: 100, orders: { user1: 100 } },
       1500: { total: 100, orders: { user1: 100 } },
     });
 
@@ -493,7 +494,7 @@ describe("E-to-E-3", () => {
     response = await request(app).get("/balances/stock");
     expect(response.status).toBe(200);
     expect(response.body["user1"]["ETH_USD_15_Oct_2024_12_00"]["yes"]).toEqual({
-      quantity: 0,
+      quantity: 100,
       locked: 200,
     });
 

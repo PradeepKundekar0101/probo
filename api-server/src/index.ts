@@ -6,13 +6,13 @@ import { onrampRouter } from "./routes/onramp";
 import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import {marketRouter} from "./routes/market"
-import { pushToQueue } from "./utils/redis";
+import { PrismaClient } from "@prisma/client";
 
+export const prismaClient = new PrismaClient()
 export const redis = new Redis({ port: 6379, host: "localhost" });
 export const subscriber = new Redis({ port: 6379, host: "localhost" });
-
-
 const app = express();
+
 app.use(express.json());
 app.get('/', (req, res) => {
     res.send("Options Trading App");

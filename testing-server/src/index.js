@@ -195,10 +195,10 @@ app.post("/order/buy", (req, res) => {
 
     let message;
     if (!hasMatches) {
-        message = "Buy order placed in order book";
+        message = "Buy order placed and pending";
     } else if (remainingQuantity === 0) {
         message = lastExecutedPrice === price ? 
-            "Buy order placed and trade executed" : 
+            `Buy order placed and trade executed` : 
             `Buy order matched at best price ${lastExecutedPrice}`;
     } else {
         message = `Buy order matched partially at ${lastExecutedPrice}, ${remainingQuantity} remaining in order book`;

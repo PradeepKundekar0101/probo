@@ -2,9 +2,6 @@ import { currentMarketPrice, inrBalances, orderBook, ordersList, stockBalances }
 import { generateId } from "../utils/generateOrderId";
 import { parsedOrderBook } from "../utils/parseOrderBook";
 import { message, publishMessage } from "../utils/publishResponse";
-import { broadCastMessage } from "../utils/ws";
-
-
 
 interface OrderData {
   price: number;
@@ -14,8 +11,6 @@ interface OrderData {
   stockType: "yes" | "no";
 }
 type StockType = "yes" | "no";
-
-
 
 function updateCurrentMarketPrice(stockSymbol: string, stockType: StockType, price: number) {
     if (!currentMarketPrice[stockSymbol]) {
@@ -29,9 +24,7 @@ function updateCurrentMarketPrice(stockSymbol: string, stockType: StockType, pri
       currentMarketPrice[stockSymbol]["yes"] = 10 - price;
       currentMarketPrice[stockSymbol]["no"] = price;
     }
-  
-  }
-
+}
 
 export const handleBuy = async (data: OrderData, eventId: string) => {
   try {
@@ -44,8 +37,7 @@ export const handleBuy = async (data: OrderData, eventId: string) => {
     if (!inrBalances[buyerId] || inrBalances[buyerId].balance < totalCost) 
         return publishMessage(message(400, "Insuffient balance", null), eventId);
 
-    if (!stockBalances[buyerId])  stockBalances[buyerId] = {};
-    
+    if (!stockBalances[buyerId])  stockBalances[buyerId] = {};  
     if (!stockBalances[buyerId][stockSymbol]) {
       stockBalances[buyerId][stockSymbol] = {
         yes: { quantity: 0, locked: 0 },
@@ -90,12 +82,9 @@ export const handleBuy = async (data: OrderData, eventId: string) => {
     //settle the buyer
     if (availableStocks === 0) {
       inrBalances[buyerId].balance -= totalTradeQty * price;
-        updateCurrentMarketPrice(stockSymbol,stockType,price)
-        broadCastMessage(stockSymbol,JSON.stringify(parsedOrderBook()))
-      return publishMessage(
-        message(200, `${totalTradeQty} qty traded directly`, null),
-        eventId
-      );
+      updateCurrentMarketPrice(stockSymbol,stockType,price)
+      publishMessage(message(200, `${totalTradeQty} qty traded directly`, null),eventId);
+      publishMessage(message(200,"",{stockSymbol,orderBook:JSON.stringify(parsedOrderBook())}),"MESSAGE")
     }
     //now let's satisfy the pending reverse orders
     let leftOverStockAfterReverseMatching = availableStocks;
@@ -173,10 +162,10 @@ export const handleBuy = async (data: OrderData, eventId: string) => {
         orderBook[stockSymbol].reverse[stockType][price].mint.remainingQty -=
           leftOverStockAfterReverseMatching;
       }
-      broadCastMessage(stockSymbol,JSON.stringify(parsedOrderBook()))
       updateCurrentMarketPrice(stockSymbol,stockType,price)
-
-      return publishMessage(message(200, `Buy completed`, null), eventId);
+      publishMessage(message(200, `Buy completed`, null), eventId);
+      publishMessage(message(200,"",{stockSymbol,orderBook:JSON.stringify(parsedOrderBook())}),"MESSAGE")    
+      return 
     }
 
     if (!orderBook[stockSymbol].reverse[reverseStockType])
@@ -191,8 +180,7 @@ export const handleBuy = async (data: OrderData, eventId: string) => {
         },
       };
     }
-    orderBook[stockSymbol].reverse[reverseStockType][reversePrice].total +=
-      leftOverStockAfterReverseMatching;
+    orderBook[stockSymbol].reverse[reverseStockType][reversePrice].total += leftOverStockAfterReverseMatching;
     inrBalances[buyerId].locked += leftOverStockAfterReverseMatching * price;
     inrBalances[buyerId].balance -= leftOverStockAfterReverseMatching * price;
     orderBook[stockSymbol].reverse[reverseStockType][
@@ -207,11 +195,10 @@ export const handleBuy = async (data: OrderData, eventId: string) => {
       reversePrice
     ].mint.remainingQty += leftOverStockAfterReverseMatching;
       updateCurrentMarketPrice(stockSymbol,stockType,price)
-      broadCastMessage(stockSymbol,JSON.stringify(parsedOrderBook()))
-    return publishMessage(message(200,`Complete `,null),
-      eventId
-    );
-  } catch (error:any) {
+     publishMessage(message(200,`Complete `,null),eventId);
+     publishMessage(message(200,"",{stockSymbol,orderBook:JSON.stringify(parsedOrderBook())}),"MESSAGE")
+     return
+    } catch (error:any) {
     return publishMessage(message(500, error.message, null),eventId);
   }
 };
@@ -258,7 +245,7 @@ export const handleSell = async (data: OrderData,eventId:string) => {
           orderBook[stockSymbol].direct[stockType][price].total -= tradeQuantity;
           orderBook[stockSymbol].direct[stockType][price].orders[buyerId] -= tradeQuantity;
           updateCurrentMarketPrice(stockSymbol,stockType,price)
-          broadCastMessage(stockSymbol,JSON.stringify(parsedOrderBook()))
+
           if (orderBook[stockSymbol].direct[stockType][price].orders[buyerId] === 0) {
             delete orderBook[stockSymbol].direct[stockType][price].orders[buyerId];
           }
@@ -296,8 +283,9 @@ export const handleSell = async (data: OrderData,eventId:string) => {
         orderType: "sell",
         status: "executed",
       });
-    return publishMessage( message(201, "Sell order placed successfully", null), eventId);
-
+     publishMessage( message(201, "Sell order placed successfully", null), eventId);
+     publishMessage(message(200,"",{stockSymbol,orderBook:JSON.stringify(parsedOrderBook())}),"MESSAGE")
+     return
   } catch (error) {
     console.log(error)
   }

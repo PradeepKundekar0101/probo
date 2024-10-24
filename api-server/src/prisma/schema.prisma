@@ -11,6 +11,8 @@ model User {
     id            String         @id @default(uuid())
     username      String         @unique @map("user_id")
     phonenumber   String
+    email         String
+    password      String
     avatarUrl     String?
     inrBalances   InrBalance[]
     stockBalances StockBalance[]
@@ -55,9 +57,8 @@ model Market {
     description String
     startTime   DateTime
     endTime     DateTime
-    yes         Int
-    no          Int
-    result      StockType?
+
+    result StockType?
 
     @@map("markets")
 }
