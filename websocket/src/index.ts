@@ -1,11 +1,10 @@
 import express from "express";
 import http from "http";
 import WebSocket from "ws";
-import { broadCastMessage } from "./utils/ws";
+// import { broadCastMessage } from "./utils/ws";
 import Redis from "ioredis";
-import { processMessages } from "./app";
-import { settleMarket } from "./controller1/market";
-import { settleMarketsOnClose } from "./controller/settleMarket";
+
+
 
 const app = express();
 const server = http.createServer(app);
@@ -46,7 +45,7 @@ wss.on("connection", (ws: WebSocket) => {
       console.log(`User joined room: ${room}`);
       ws.send(`Joined ${room}`);
     } else if (event === "message" && room && message) {
-      broadCastMessage(room, message);
+    //   broadCastMessage(room, message);
       ws.send(`Sent "${message}" to room ${room}`);
     } else {
       ws.send("Invalid event or missing room/message data.");
@@ -71,16 +70,6 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
-const pollQueue = async () => {
-  while (true) {
-    await processMessages();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-};
 
-pollQueue();
-server.listen(8001, () => { console.log("Listening at 8001") });
 
-setTimeout(()=>{
-  settleMarketsOnClose()
-},5000)
+server.listen(8001, () => { console.log("Listening at 8003") });
