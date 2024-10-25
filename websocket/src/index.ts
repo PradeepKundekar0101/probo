@@ -1,10 +1,8 @@
 import express from "express";
 import http from "http";
 import WebSocket from "ws";
-// import { broadCastMessage } from "./utils/ws";
 import Redis from "ioredis";
-
-
+import { broadCastMessage } from "./utils/ws";
 
 const app = express();
 const server = http.createServer(app);
@@ -12,23 +10,23 @@ const wss = new WebSocket.Server({
   server
 });
 export const rooms = new Map<string, Set<WebSocket>>();
-export const redis = new Redis({ port: 6379, host: "localhost" });
-
+export const subscriber = new Redis({ port: 6379, host: "localhost" });
+subscriber.subscribe("MESSAGE")
+subscriber.on("message",async (message:string)=>{
+     const parsedData = JSON.parse(message);
+     const {room,orderBook} = parsedData;
+     broadCastMessage(room,JSON.stringify(orderBook))
+})
 
 export const joinRoom = (room: string, ws: WebSocket) => {
   if (!rooms.has(room)) rooms.set(room, new Set());
   rooms.get(room)!.add(ws);
-  console.log("Added to room");
-  console.log(rooms);
 };
-
 wss.on("connection", (ws: WebSocket) => {
   console.log("New WebSocket connection!");
     ws.send("Welcome to server")
   ws.on("message", (data: WebSocket.Data,) => {
-    console.log("first")
     let parsedData;
-   
     try {
       parsedData = JSON.parse(data.toString());
     } catch (error) {
@@ -36,18 +34,12 @@ wss.on("connection", (ws: WebSocket) => {
       ws.send("Error: Invalid message format.");
       return;
     }
-    
-    const { event, room, message } = parsedData;
-
+    const { event, room } = parsedData;
     if (event === "joinRoom" && room) {
-      console.log("Joining room" + room);
       joinRoom(room, ws);
-      console.log(`User joined room: ${room}`);
       ws.send(`Joined ${room}`);
-    } else if (event === "message" && room && message) {
-    //   broadCastMessage(room, message);
-      ws.send(`Sent "${message}" to room ${room}`);
-    } else {
+    }
+    else{
       ws.send("Invalid event or missing room/message data.");
     }
   });
@@ -70,6 +62,4 @@ wss.on("connection", (ws: WebSocket) => {
   });
 });
 
-
-
-server.listen(8001, () => { console.log("Listening at 8003") });
+server.listen(8003, () => { console.log("WebSocket Server Listening at 8003") });

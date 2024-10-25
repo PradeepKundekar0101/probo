@@ -1,6 +1,6 @@
 import express from "express";
 
-import { pushToQueue } from "../utils/redis";
+import { pushToQueue } from "../services/redis";
 export const orderRouter = express.Router();
 
 orderRouter.post("/buy", (req,res)=>{

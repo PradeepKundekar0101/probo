@@ -1,13 +1,19 @@
 import { markets, orderBook } from "../db"
-import { Market } from "../db/types"
-import { message, publishMessage } from "../utils/publishResponse"
+import { Market } from "../types/market"
+import { message, publishMessage } from "../services/redis"
+import { produceMessage } from "../services/kafka"
 export const createMarket = async (data:Market,eventId:string)=>{
     const {startTime,stockSymbol,endTime,title,description,result} = data
     try
     {
-        if(markets[stockSymbol]) return publishMessage(message(400,`${stockSymbol} already taken `,null),eventId)
+        if(markets[stockSymbol]) 
+            return publishMessage(message(409,`${stockSymbol} already taken `,null),eventId)
         markets[stockSymbol]={ startTime,stockSymbol,description,endTime,title,result}
-        orderBook[stockSymbol]={reverse:{yes:{},no:{}},direct:{yes:{},no:{}}}
+        orderBook[stockSymbol]={
+            yes:{},
+            no:{}
+        }
+
         publishMessage(message(201,"Succesfully created market"+stockSymbol,markets[stockSymbol]),eventId)
     }
     catch (error:any)
