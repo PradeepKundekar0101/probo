@@ -30,8 +30,8 @@ export const getInrBalanceByUserId =catchAsync(async(req:AuthRequest,res:Respons
     })
     
 })
-export const getStockBalanceByUserId =catchAsync(async(req:Request,res:Response)=>{
-    const userId = req.params.userId
+export const getStockBalanceByUserId =catchAsync(async(req:AuthRequest,res:Response)=>{
+    const userId = req.userId
     if(!userId)
     {
         sendResponse(res,400,{

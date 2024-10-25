@@ -15,8 +15,17 @@ export const updateInrBalance =async (data:any)=>{
         })
    
 }
+interface UpdateStockBalanceData {
+    userId: string;
+    noLocked: number;
+    yesLocked: number;
+    stockSymbol: string;
+    yesQuantity: number;
+    noQuantity: number;
+}
 
-export const updateStockBalance = async (data: any) => {
+
+export const updateStockBalance = async (data: UpdateStockBalanceData) => {
     const {
         userId,
         noLocked,
@@ -24,21 +33,34 @@ export const updateStockBalance = async (data: any) => {
         stockSymbol,
         yesQuantity,
         noQuantity,
-    }: {
-        userId: string;
-        noLocked: number;
-        yesLocked: number;
-        stockSymbol: string;
-        yesQuantity: number;
-        noQuantity: number;
     } = data;
 
-        await prismaClient.stockBalance.update({
+    try {
+
+        const existingStockBalance = await prismaClient.stockBalance.findFirst({
             where: {
                 userId,
-                stockSymbol:{
-                    stockSymbol
+                symbol: stockSymbol
+            }
+        });
+
+        if (!existingStockBalance) {
+
+            return await prismaClient.stockBalance.create({
+                data: {
+                    userId,
+                    symbol: stockSymbol,
+                    yesLocked: yesLocked,
+                    yesQuantity: yesQuantity,
+                    noLocked: noLocked,
+                    noQuantity: noQuantity
                 }
+            });
+        }
+
+        return await prismaClient.stockBalance.update({
+            where: {
+                id: existingStockBalance.id 
             },
             data: {
                 yesQuantity,
@@ -47,5 +69,8 @@ export const updateStockBalance = async (data: any) => {
                 yesLocked,
             },
         });
-    
+    } catch (error) {
+        console.error('Error updating stock balance:', error);
+        throw new Error(`Failed to update stock balance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 };

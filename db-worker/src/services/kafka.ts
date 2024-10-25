@@ -2,21 +2,18 @@ import { Consumer, Kafka, KafkaConfig } from "kafkajs";
 import AWS from 'aws-sdk';
 import { updateInrBalance, updateStockBalance } from "../controller/balance";
 
-// Configure AWS S3
 const s3 = new AWS.S3({ region: process.env.AWS_REGION! });
 
-// Type definitions
 interface KafkaMessage {
   operation: 'UPDATE_INR_BALANCE' | 'UPDATE_STOCK_BALANCE' | 'UPDATE_ORDERBOOK';
   data: any;
 }
 
-// Constants
-const RETRY_INTERVAL = 60 * 1000; // 1 minute
-const MAX_RETRIES = 5;
-const RECONNECT_TIMEOUT = 5000; // 5 seconds
 
-// State management (using closures instead of class properties)
+const RETRY_INTERVAL = 60 * 1000; 
+const MAX_RETRIES = 5;
+const RECONNECT_TIMEOUT = 5000; 
+
 let kafka: Kafka | null = null;
 let consumer: Consumer | null = null;
 let retryCount = 0;
@@ -81,7 +78,7 @@ async function processMessage(operation: string, data: any, pause: () => void): 
         await updateStockBalance(data);
         break;
       case "UPDATE_ORDERBOOK":
-        // Implement orderbook update logic
+      
         break;
       default:
         console.warn(`Unknown operation: ${operation}`);

@@ -1,12 +1,10 @@
 import express from "express";
 import { pushToQueue } from "../services/redis";
+import { multerUpload } from "../services/multer";
+import { createCategory, createMarket } from "../controllers/market";
 
 export const marketRouter = express.Router();
 
-marketRouter.post("/create", (req, res) => {
-  try {
-    pushToQueue("CREATE_MARKET",  req.body , res);
-  } catch (error) {
-    res.status(500).send("Error");
-  }
-});
+marketRouter.post("/createCategory",multerUpload.single("image"),createCategory)
+
+marketRouter.post("/create", createMarket);
