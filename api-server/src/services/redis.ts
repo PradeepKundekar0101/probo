@@ -4,7 +4,7 @@ import { generateId } from "../utils/generateOrderId";
 
 export const redis = new Redis({ port: 6379, host: "localhost" });
 export const subscriber = new Redis({ port: 6379, host: "localhost" });
-export async function pushToQueue(endPoint: string, data: any, res: any) {
+export async function pushToQueue(endPoint: string, data: any, res?: any) {
   try {
     const eventId = generateId(); 
     const message = { endPoint, data, eventId };
@@ -20,8 +20,8 @@ export async function pushToQueue(endPoint: string, data: any, res: any) {
       }
     };
 
-    subscriber.subscribe(eventId); 
-    subscriber.on("message", messageHandler);
+    res && subscriber.subscribe(eventId); 
+    res && subscriber.on("message", messageHandler);
 
   } catch (error) {
     console.error("Error queuing message:", error);

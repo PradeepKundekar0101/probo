@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { catchAsync, sendResponse } from "../utils/api.util";
-import { prismaClient } from "..";
+import { prismaClient } from "../services/prisma";
 
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const { stockSymbol, title, description, startTime, endTime } = req.body;

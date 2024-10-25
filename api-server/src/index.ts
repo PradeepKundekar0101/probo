@@ -5,7 +5,8 @@ import { onrampRouter } from "./routes/onramp";
 import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import {marketRouter} from "./routes/market"
-
+import dotenv from "dotenv"
+dotenv.config()
 const app = express();
 
 app.use(express.json());

@@ -5,7 +5,7 @@ import { getInrBalanceByUserId } from "../controllers/balance";
 
 export const balanceRouter = express.Router();
 
-balanceRouter.get("/inr/:userId", isAuthenticated,getInrBalanceByUserId)
+balanceRouter.get("/inr/", isAuthenticated,getInrBalanceByUserId)
 balanceRouter.get("/inr/", (req: Request, res) => {
   try {
     pushToQueue("GET_INR_BALANCE_ALL", {}, res);

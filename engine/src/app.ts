@@ -1,8 +1,7 @@
-import express from "express";
 import { handleBuy, handleSell } from './controller/order';
 import { createMarket } from './controller/market';
 import {redis} from './index'
-export const app = express();
+import { createUser } from './controller/user';
 
 export const processMessages = async ()=>{
     try {
@@ -11,6 +10,9 @@ export const processMessages = async ()=>{
             const parsedData = JSON.parse(message);
             const { data, endPoint, eventId } = parsedData;
             switch (endPoint) {
+              case "CREATE_USER":
+                await createUser(data,eventId)
+                break;
               case "CREATE_MARKET":
                 await createMarket(data,eventId);
                 break;

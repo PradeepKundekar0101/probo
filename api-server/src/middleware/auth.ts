@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { sendResponse } from "../utils/api.util";
+import dotenv from "dotenv"
+
+dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET;
 export interface AuthRequest extends Request {
   headers: {
@@ -27,6 +30,7 @@ export const isAuthenticated = (
       sendResponse(res, 403, "Forbidden");
       return;
     }
+    console.log(user)
     req.userId = user.id;
     next();
   });
