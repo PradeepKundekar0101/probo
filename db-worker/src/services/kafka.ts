@@ -1,5 +1,6 @@
-import { Kafka, Producer } from "kafkajs";
+import { Consumer, Kafka, Producer } from "kafkajs";
 import AWS from 'aws-sdk';
+import { updateInrBalance, updateStockBalance } from "../controller/balance";
 
 const s3 = new AWS.S3({ region: process.env.AWS_REGION! });
 
@@ -21,7 +22,7 @@ async function getCaCertFromS3(bucketName: string, objectKey: string): Promise<s
    }
 }
 
-let producer: Producer | null = null;
+let consumer: Consumer | null = null;
 let kafka: Kafka | null = null;
 
 async function createKafkaInstance(): Promise<Kafka> {
@@ -45,19 +46,56 @@ async function createKafkaInstance(): Promise<Kafka> {
    return kafka;
 }
 
-async function createConsumer(): Promise<Producer> {
-   if (producer) return producer;
-
+export async function createConsumer(): Promise<Consumer> {
+   if (consumer) return consumer;
    const kafkaInstance = await createKafkaInstance();
-   producer = kafkaInstance.producer();
-   await producer.connect();
-   return producer;
+   consumer = kafkaInstance.consumer({
+      groupId:"default",
+   });
+   await consumer.connect();
+   await consumer.subscribe(
+   {
+      topic:"MESSAGES",
+      fromBeginning:true
+   })
+   return consumer;
 }
 
-export const produceMessage = async (message: string) => {
-   const producer = await createConsumer();
-   await producer.send({
-      topic: "MESSAGES",
-      messages: [{ key: `message-${Date.now()}`, value: message }]
-   });
+export const startConsumeMessages = async () => {
+   const consumer = await createConsumer();
+   await consumer.run({
+      autoCommit:true,
+      eachMessage:async({message,pause})=>{
+         if(!message){
+            return
+         } 
+         const {operation,data} = JSON.parse(message.value?.toString()!)
+         switch(operation ){
+            case "UPDATE_INR_BALANCE":
+               try {
+                  updateInrBalance(data)
+                  break;
+               } catch (error) {
+                  console.log(error)
+                  pause()
+                  setTimeout(()=>{
+                     consumer.resume([{topic:"MESSAGES"}])
+                  },60 * 1000)
+               }
+            case "UPDATE_STOCK_BALANCE":
+               try {
+                  updateStockBalance(data)
+               } catch (error) {
+                  console.log(error)
+                  pause()
+                  setTimeout(()=>{
+                     consumer.resume([{topic:"MESSAGES"}])
+                  },60 * 1000)
+               }
+               break;
+            case "UPDATE_ORDERBOOK":
+               break;
+         }
+      }
+   })
 };

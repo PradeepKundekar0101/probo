@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { catchAsync, sendResponse } from "../utils/api.util";
-import { prismaClient } from "..";
+import { prismaClient } from "../services/prisma";
 import {hash} from "bcrypt"
 import jwt from "jsonwebtoken"
 const JWT_SECRET = process.env.JWT_SECRET;

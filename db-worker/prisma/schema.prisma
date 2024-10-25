@@ -22,7 +22,7 @@ model User {
 model InrBalance {
     id     Int    @id @default(autoincrement())
     user   User   @relation(fields: [userId], references: [id])
-    userId String
+    userId String @unique
 
     balance Float
     locked  Float
@@ -38,9 +38,9 @@ model StockSymbol {
 model StockBalance {
     id          Int         @id @default(autoincrement())
     user        User        @relation(fields: [userId], references: [id])
-    userId      String
+    userId      String      @unique
     stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
-    symbol      String
+    symbol      String      @unique
 
     yesQuantity Int
     yesLocked   Int
