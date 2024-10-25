@@ -1,5 +1,5 @@
 import express, { Request } from "express";
-import { pushToQueue } from "../utils/redis";
+import { pushToQueue } from "../services/redis";
 import { isAuthenticated } from "../middleware/auth";
 import { getInrBalanceByUserId } from "../controllers/balance";
 

@@ -1,5 +1,5 @@
 import { inrBalances } from "../db"
-import { message, publishMessage } from "../utils/publishResponse"
+import { message, publishMessage } from "../services/redis"
 export const onRamp = async (data:{userId:string,amount:number},eventId:string)=>{
     try
     {

@@ -1,7 +1,7 @@
 import express from "express"
 
 export const userRouter = express.Router();
-import { pushToQueue } from "../utils/redis";
+import { pushToQueue } from "../services/redis";
 import { prismaClient } from "..";
 import { createUser } from "../controllers/user";
 
