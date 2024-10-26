@@ -11,33 +11,40 @@ interface CreateMarketRequest {
   startTime: string;
   endTime: string;
   categoryId: string;
+  categoryType:string
 }
 
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const { 
-    stockSymbol, 
+
     title, 
     description, 
     startTime, 
     endTime,
-    categoryId 
+    categoryId,
+    categoryType
   }: CreateMarketRequest = req.body;
 
-  if (!stockSymbol || !title || !description || !startTime || !endTime || !categoryId) {
+  if (  !title || !description || !startTime || !endTime || !categoryId || !categoryType) {
     return sendResponse(res, 400, {
-      message: "All fields (stockSymbol, title, description, startTime, endTime, categoryId) are required",
+      message: "All fields ( title, description, startTime, endTime, categoryId,categoryType) are required",
       data: null,
     });
   }
-
+  const image = req.file as unknown as Express.Multer.File;
+  const fileName = `${title}-${image.originalname}`;
+  const destination = await putObjectURL(image, fileName);
+  const fileUrl = getObjectURL(destination);
+  
   try {
-    const existingStockSymbol = await prismaClient.stockSymbol.findUnique({
-      where: { stockSymbol },
-    });
+    const existingStockSymbol = await prismaClient.market.findFirst({where:{
+      title
+    }})
+
 
     if (existingStockSymbol) {
       return sendResponse(res, 409, {
-        message: "Stock already exists",
+        message: "Market already exists",
         data: null,
       });
     }
@@ -69,8 +76,9 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
         description,
         startTime: parsedStartTime,
         endTime: parsedEndTime,
-        symbol: stockSymbol,
+        thumbnail:fileUrl,
         categoryId, 
+        categoryType
       }
     });
 
@@ -91,27 +99,8 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
 });
 
 
-export const validateMarketData = (data: CreateMarketRequest): boolean => {
-  const startTime = new Date(data.startTime);
-  const endTime = new Date(data.endTime);
-  
-  if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-    throw new Error('Invalid date format');
-  }
-
-  if (endTime <= startTime) {
-    throw new Error('End time must be after start time');
-  }
-
-  if (startTime < new Date()) {
-    throw new Error('Start time cannot be in the past');
-  }
-
-  return true;
-};
-
 export const createCategory = catchAsync(async(req:Request,res:Response)=>{
-  const {categoryName,categoryType} = req.body
+  const {categoryName} = req.body
  
   const image = req.file as unknown as Express.Multer.File;
   if (!categoryName || !image) {
@@ -124,11 +113,19 @@ export const createCategory = catchAsync(async(req:Request,res:Response)=>{
 
   const category = await  prismaClient.category.create({
     data: {
-      categoryType,
       categoryName,
       icon:fileUrl,
     }
   });
 
   return sendResponse(res, 201, category);
+})
+
+export const getMarkets = catchAsync(async(req:Request,res:Response)=>{
+  const markets = await prismaClient.market.findMany({})  
+  sendResponse(res,200,markets)
+})
+export const getCategories = catchAsync(async(req:Request,res:Response)=>{
+  const categories = await prismaClient.category.findMany({})  
+  sendResponse(res,200,categories)
 })

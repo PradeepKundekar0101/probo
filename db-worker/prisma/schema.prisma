@@ -27,19 +27,12 @@ model InrBalance {
     locked  Float
 }
 
-model StockSymbol {
-    stockSymbol   String         @id
-    stockBalances StockBalance[]
-    markets       Market[]
-    orders        Order[]
-}
-
 model StockBalance {
-    id          Int         @id @default(autoincrement())
-    user        User        @relation(fields: [userId], references: [id])
-    userId      String      @unique
-    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
-    symbol      String
+    id          Int    @id @default(autoincrement())
+    user        User   @relation(fields: [userId], references: [id])
+    userId      String
+    market      Market @relation(fields: [marketId], references: [id])
+    marketId    String
     yesQuantity Int
     yesLocked   Int
     noQuantity  Int
@@ -47,34 +40,35 @@ model StockBalance {
 }
 
 model Market {
-    id          Int         @id @default(autoincrement())
-    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
-    symbol      String
-    title       String
-    description String
-    startTime   DateTime
-    endTime     DateTime
-    result      StockType?
-
-    category   Category @relation(fields: [categoryId], references: [id])
-    categoryId String
+    id           String         @id @default(uuid())
+    title        String
+    description  String
+    startTime    DateTime
+    endTime      DateTime
+    result       StockType?
+    thumbnail    String?
+    category     Category       @relation(fields: [categoryId], references: [id])
+    categoryId   String
+    categoryType String
+    StockBalance StockBalance[]
+    Order        Order[]
 
     @@map("markets")
 }
 
 model Order {
-    id          String      @id @default(uuid())
-    stockSymbol StockSymbol @relation(fields: [symbol], references: [stockSymbol])
-    symbol      String
-    user        User        @relation(fields: [userId], references: [id])
-    userId      String
-    stockType   StockType
-    createdAt   DateTime    @default(now())
-    quantity    Int
-    price       Float
-    orderType   String
-    totalPrice  Float
-    status      OrderStatus
+    id         String      @id @default(uuid())
+    market     Market      @relation(fields: [marketId], references: [id])
+    marketId   String
+    user       User        @relation(fields: [userId], references: [id])
+    userId     String
+    stockType  StockType
+    createdAt  DateTime    @default(now())
+    quantity   Int
+    price      Float
+    orderType  String
+    totalPrice Float
+    status     OrderStatus
 }
 
 enum StockType {
@@ -91,6 +85,5 @@ model Category {
     id           String   @id @default(uuid())
     categoryName String
     icon         String?
-    categoryType String
     markets      Market[]
 }

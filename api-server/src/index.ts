@@ -6,9 +6,12 @@ import { orderBookRouter } from "./routes/orderBook";
 import { orderRouter } from "./routes/order";
 import {marketRouter} from "./routes/market"
 import dotenv from "dotenv"
+import cors from "cors"
 dotenv.config()
 const app = express();
-
+app.use(cors({
+    origin:"*"
+}))
 app.use(express.json());
 app.get('/', (req, res) => {
     res.send("Options Trading App");
