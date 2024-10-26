@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "probo",
-    "slug": "probo",
+    "name": "opinx-app",
+    "slug": "opinx-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,6 +15,7 @@
       "supportsTablet": true
     },
     "android": {
+      "permissions": ["INTERNET"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -22,6 +23,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }

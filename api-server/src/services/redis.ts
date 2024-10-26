@@ -16,7 +16,7 @@ export async function pushToQueue(endPoint: string, data: any, res?: any) {
       if (channel === eventId) {
         subscriber.unsubscribe(eventId); 
         const { statusCode, message, data } = JSON.parse(messageFromPublisher);
-        res.status(statusCode).send({ message, data });
+        res && res.status(statusCode).send({ message, data });
       }
     };
 
@@ -25,6 +25,6 @@ export async function pushToQueue(endPoint: string, data: any, res?: any) {
 
   } catch (error) {
     console.error("Error queuing message:", error);
-    res.status(500).send({ status: "Error queuing message" });
+    res && res.status(500).send({ status: "Error queuing message" });
   }
 }
