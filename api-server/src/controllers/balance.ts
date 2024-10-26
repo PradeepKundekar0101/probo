@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { catchAsync, sendResponse } from "../utils/api.util";
-import { prismaClient } from "..";
+import { prismaClient } from "../services/prisma";
+import { AuthRequest } from "../middleware/auth";
 
-export const getInrBalanceByUserId =catchAsync(async(req:Request,res:Response)=>{
-    const userId = req.params.userId
+export const getInrBalanceByUserId =catchAsync(async(req:AuthRequest,res:Response)=>{
+    const userId = req.userId
     if(!userId)
     {
         sendResponse(res,400,{
@@ -29,8 +30,8 @@ export const getInrBalanceByUserId =catchAsync(async(req:Request,res:Response)=>
     })
     
 })
-export const getStockBalanceByUserId =catchAsync(async(req:Request,res:Response)=>{
-    const userId = req.params.userId
+export const getStockBalanceByUserId =catchAsync(async(req:AuthRequest,res:Response)=>{
+    const userId = req.userId
     if(!userId)
     {
         sendResponse(res,400,{

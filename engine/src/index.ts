@@ -4,7 +4,10 @@ import dotenv from 'dotenv'
 import { processMessages } from "./app";
 import { settleMarketsOnClose } from "./controller/settleMarket";
 import { Kafka } from "kafkajs";
-import {app} from '../src/app'
+import express from "express";
+
+export const app = express();
+
 dotenv.config()
 export const redis = new Redis({ port: 6379, host: "localhost" });
 

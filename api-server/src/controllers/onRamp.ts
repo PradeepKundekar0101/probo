@@ -1,6 +1,6 @@
 import { catchAsync, sendResponse } from "../utils/api.util";
 import { Request, Response } from "express";
-import { prismaClient } from "..";
+import { prismaClient } from "../services/prisma";
 
 export const onRampAmount = catchAsync(async (req: Request, res: Response) => {
     const { userId, amount } = req.body;

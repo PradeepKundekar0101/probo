@@ -46,7 +46,6 @@ async function createKafkaInstance(): Promise<Kafka> {
 }
 
 async function createProducer(): Promise<Producer> {
-   if (producer) return producer;
 
    const kafkaInstance = await createKafkaInstance();
    producer = kafkaInstance.producer();
@@ -55,7 +54,9 @@ async function createProducer(): Promise<Producer> {
 }
 
 export const produceMessage = async (message: string) => {
-   const producer = await createProducer();
+   if(!producer){
+      producer = await createProducer();
+   }
    await producer.send({
       topic: "MESSAGES",
       messages: [{ key: `message-${Date.now()}`, value: message }]

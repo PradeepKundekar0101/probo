@@ -1,9 +1,19 @@
-import express from "express"
-import { PrismaClient } from "@prisma/client";
-const app = express()
-export const prismaClient = new PrismaClient()
-const PORT  = process.env.PORT || 8004;
+// Express server setup
+import express from "express";
+import dotenv from "dotenv";
+import { startConsuming } from "./services/kafka";
 
-app.listen(PORT,()=>{
-    console.log("DB Worker running at PORT "+PORT)
-})
+dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 8004;
+
+
+startConsuming()
+  .catch(error => {
+    console.error('Failed to start Kafka consumer:', error);
+    process.exit(1);
+  });
+
+app.listen(PORT, () => {
+  console.log(`DB Worker running at PORT ${PORT}`);
+});

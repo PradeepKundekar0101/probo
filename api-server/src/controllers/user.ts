@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import { catchAsync, sendResponse } from "../utils/api.util";
-import { prismaClient } from "..";
+import { prismaClient } from "../services/prisma";
 import {hash} from "bcrypt"
 import jwt from "jsonwebtoken"
+import dotenv from "dotenv"
+import { pushToQueue } from "../services/redis";
+dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export const createUser = catchAsync(async(req:Request,res:Response)=>{
@@ -40,14 +43,17 @@ export const createUser = catchAsync(async(req:Request,res:Response)=>{
         return
     }  
     const hashedPassword = await hash(password,10)
-    const token = jwt.sign("",JWT_SECRET!)
     const user = await prismaClient.user.create({data:{
-        username,password,email,phonenumber
+        username,password:hashedPassword,email,phonenumber
     }})
+    await prismaClient.inrBalance.create({
+        data:{userId:user.id,locked:0,balance:0}
+    })
+    pushToQueue("CREATE_USER",user.id)
+    const token = jwt.sign({id:user.id},JWT_SECRET!)
     return sendResponse(res,201,{message:"User created",data:{
         user,
         token
     }})
-    
 
 })

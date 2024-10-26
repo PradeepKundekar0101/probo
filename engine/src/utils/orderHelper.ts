@@ -1,4 +1,5 @@
 import { inrBalances, stockBalances, orderBook } from "../db";
+import { produceMessage } from "../services/kafka";
 
 export const isOrderValid = (
   userId: string,
@@ -99,7 +100,26 @@ export const buy = (
   }
 
   inrBalances[userId].locked -= (quantity - remainingQty) * price * 100;
+  const stockBalance = stockBalances[userId][stockSymbol]
+  const {yes,no} =stockBalance
+  const stock_message = {
+    operation:"UPDATE_STOCK_BALANCE",
+    data:{
+      userId,
+      noLocked:no.locked,
+      yesLocked:yes.locked,
+      stockSymbol,
+      yesQuantity:yes.quantity,
+      noQuantity:no.quantity
+    }
+  }
+  produceMessage(JSON.stringify({message:stock_message}))
 
+  const inr_message = {
+    operation:"UPDATE_INR_BALANCE",
+    data:{userId,locked:inrBalances[userId].locked,balance:inrBalances[userId].balance}
+  }
+  produceMessage(JSON.stringify({message:inr_message}))
   return {
     message: `Buy order for '${stockType}' added for ${stockSymbol}`,
   };
