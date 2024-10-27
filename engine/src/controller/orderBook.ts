@@ -1,9 +1,9 @@
-import {  orderBook } from "../db"
+import {  GlobalData } from "../db"
 import { message, publishMessage } from "../services/redis"
 export const getOrderBook = async (eventId:string)=>{
     try
     {
-        publishMessage(message(200,"Success",orderBook),eventId)
+        publishMessage(message(200,"Success", GlobalData.orderBook),eventId)
     }
     catch (error:any)
     {
