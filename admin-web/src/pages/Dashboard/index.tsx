@@ -81,7 +81,7 @@ const Dashboard = () => {
       );
 
       const formData = new FormData();
-      formData.append("title", title);
+      formData.append("stockSymbol", title);
       formData.append("categoryId", categoryId);
       formData.append("description", description);
       formData.append("startTime", combinedStartDate.toISOString());

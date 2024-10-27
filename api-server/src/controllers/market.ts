@@ -16,8 +16,7 @@ interface CreateMarketRequest {
 
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const { 
-
-    title, 
+    stockSymbol, 
     description, 
     startTime, 
     endTime,
@@ -25,20 +24,20 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
     categoryType
   }: CreateMarketRequest = req.body;
 
-  if (  !title || !description || !startTime || !endTime || !categoryId || !categoryType) {
+  if (  !stockSymbol || !description || !startTime || !endTime || !categoryId || !categoryType) {
     return sendResponse(res, 400, {
-      message: "All fields ( title, description, startTime, endTime, categoryId,categoryType) are required",
+      message: "All fields ( stockSymbol, description, startTime, endTime, categoryId,categoryType) are required",
       data: null,
     });
   }
-  const image = req.file as unknown as Express.Multer.File;
-  const fileName = `${title}-${image.originalname}`;
-  const destination = await putObjectURL(image, fileName);
-  const fileUrl = getObjectURL(destination);
   
   try {
+    const image = req.file as unknown as Express.Multer.File;
+    const fileName = `${stockSymbol}-${image.originalname}`;
+    const destination = await putObjectURL(image, fileName);
+    const fileUrl = getObjectURL(destination);
     const existingStockSymbol = await prismaClient.market.findFirst({where:{
-      title
+      stockSymbol
     }})
 
 
@@ -72,7 +71,7 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
     }
     const market = await prismaClient.market.create({
       data: {
-        title,
+        stockSymbol,
         description,
         startTime: parsedStartTime,
         endTime: parsedEndTime,
@@ -82,7 +81,7 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
       }
     });
 
-    pushToQueue("CREATE_MARKET",req.body)
+    pushToQueue("CREATE_MARKET",{...req.body,stockSymbol:market.id})
 
     return sendResponse(res, 201, {
       message: "Market created successfully",
@@ -101,8 +100,9 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
 
 export const createCategory = catchAsync(async(req:Request,res:Response)=>{
   const {categoryName} = req.body
- 
+
   const image = req.file as unknown as Express.Multer.File;
+  console.log(image)
   if (!categoryName || !image) {
     sendResponse(res,400, "Please provide title and image");
     return;

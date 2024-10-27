@@ -1,11 +1,13 @@
 import { catchAsync, sendResponse } from "../utils/api.util";
 import { Request, Response } from "express";
 import { prismaClient } from "../services/prisma";
+import { pushToQueue } from "../services/redis";
+import { AuthRequest } from "../middleware/auth";
 
-export const onRampAmount = catchAsync(async (req: Request, res: Response) => {
-    const { userId, amount } = req.body;
-
-    if (!userId || !amount) {
+export const onRampAmount = catchAsync(async (req: AuthRequest, res: Response) => {
+    const {  amount } = req.body;
+    const userId = req.userId
+    if ( !amount) {
         sendResponse(res, 400, {
             message: "userId or amount not provided",
             data: null,
@@ -29,6 +31,9 @@ export const onRampAmount = catchAsync(async (req: Request, res: Response) => {
             },
         },
     });
+    console.log({userId,amount})
+    pushToQueue("ONRAMP",{userId,amount})
+
 
     return sendResponse(res, 200, {
         message: "Success",

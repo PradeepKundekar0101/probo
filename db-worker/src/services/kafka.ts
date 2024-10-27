@@ -5,8 +5,8 @@ import { updateInrBalance, updateStockBalance } from "../controller/balance";
 const s3 = new AWS.S3({ region: process.env.AWS_REGION! });
 
 interface KafkaMessage {
-  operation: 'UPDATE_INR_BALANCE' | 'UPDATE_STOCK_BALANCE' | 'UPDATE_ORDERBOOK';
-  data: any;
+  message:{operation: 'UPDATE_INR_BALANCE' | 'UPDATE_STOCK_BALANCE' | 'UPDATE_ORDERBOOK';
+  data: any;}
 }
 
 
@@ -140,7 +140,6 @@ export async function startConsuming(): Promise<void> {
     const kafkaInstance = await createKafkaInstance();
     consumer = kafkaInstance.consumer({ groupId: "default" });
 
-   
     consumer.on('consumer.disconnect', async () => {
       console.warn('Consumer disconnected');
       await handleConnectionError(new Error('Consumer disconnected'));
@@ -155,14 +154,16 @@ export async function startConsuming(): Promise<void> {
     await consumer.run({
       autoCommit: true,
       eachMessage: async ({ message, pause }) => {
+
         if (!message?.value) {
-          console.warn('Received empty message');
+          console.log('Received empty message');
           return;
         }
 
         try {
           const payload: KafkaMessage = JSON.parse(message.value.toString());
-          await processMessage(payload.operation, payload.data, pause);
+          console.log(payload)
+          await processMessage(payload.message.operation, payload.message.data, pause);
         } catch (error) {
           console.error('Error processing message:', error);
           pause();

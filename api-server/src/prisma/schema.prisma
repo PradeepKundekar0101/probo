@@ -40,17 +40,16 @@ model StockBalance {
 }
 
 model Market {
-    id           String     @id @default(uuid())
-    title        String
+    id           String         @id @default(uuid())
+    stockSymbol  String         @default("")
     description  String
     startTime    DateTime
     endTime      DateTime
     result       StockType?
     thumbnail    String?
-    category     Category   @relation(fields: [categoryId], references: [id])
+    category     Category       @relation(fields: [categoryId], references: [id])
     categoryId   String
-    categoryType String     @default("")
-
+    categoryType String
     StockBalance StockBalance[]
     Order        Order[]
 

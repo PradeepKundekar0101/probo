@@ -49,15 +49,16 @@ const TabsLayout = () => {
       
     
       <Tabs.Screen
-        name="bookmark/index"
+
+        name="profile/index"
         options={{
-          title: "Bookmarks",
+          title: "Profile",
           headerShown: false,
           tabBarIcon: ({ focused, color }) => (
             <TabIconComponent
-              name={"Bookmark"}
+              name={"Profile"}
               focused={focused}
-              icon={ICONS.bookmark}
+              icon={ICONS.account}
               color={color}
             />
           ),

@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore';
 
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'https://887c-49-36-137-10.ngrok-free.app',
   headers: {
     'Content-Type': 'application/json',
   },

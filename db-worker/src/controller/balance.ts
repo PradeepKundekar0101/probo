@@ -3,8 +3,9 @@ export const updateInrBalance =async (data:any)=>{
     const {userId,locked,balance}:{
         userId:string,locked:number,balance:number
     } = data
-
-        await prismaClient.inrBalance.update({
+    console.log("Updatiing Inr balance of"+userId)
+    console.log(locked+" "+balance)
+    await prismaClient.inrBalance.update({
             where:{
                 userId
             },
@@ -40,16 +41,16 @@ export const updateStockBalance = async (data: UpdateStockBalanceData) => {
         const existingStockBalance = await prismaClient.stockBalance.findFirst({
             where: {
                 userId,
-                symbol: stockSymbol
+                marketId: stockSymbol
             }
         });
-
+        console.log("Existing sb")
+        console.log(existingStockBalance)
         if (!existingStockBalance) {
-
             return await prismaClient.stockBalance.create({
                 data: {
                     userId,
-                    symbol: stockSymbol,
+                    marketId:stockSymbol,
                     yesLocked: yesLocked,
                     yesQuantity: yesQuantity,
                     noLocked: noLocked,
