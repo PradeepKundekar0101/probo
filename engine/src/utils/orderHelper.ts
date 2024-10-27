@@ -53,6 +53,7 @@ export const buy = (
   price: number,
   stockType: "yes" | "no"
 ) => {
+    console.log(inrBalances)
   if (!isOrderValid(userId, quantity, price))
     return {error: "Invalid order" };
   if (!orderBook[stockSymbol]) return { error:"Invalid stock symbol" };
@@ -113,13 +114,13 @@ export const buy = (
       noQuantity:no.quantity
     }
   }
-  produceMessage(JSON.stringify({message:stock_message}))
+  // produceMessage(JSON.stringify({message:stock_message}))
 
   const inr_message = {
     operation:"UPDATE_INR_BALANCE",
     data:{userId,locked:inrBalances[userId].locked,balance:inrBalances[userId].balance}
   }
-  produceMessage(JSON.stringify({message:inr_message}))
+  // produceMessage(JSON.stringify({message:inr_message}))
   return {
     message: `Buy order for '${stockType}' added for ${stockSymbol}`,
   };

@@ -13,7 +13,7 @@ export const createMarket = async (data:Market,eventId:string)=>{
             yes:{},
             no:{}
         }
-
+        
         publishMessage(message(201,"Succesfully created market"+stockSymbol,markets[stockSymbol]),eventId)
     }
     catch (error:any)

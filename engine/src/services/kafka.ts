@@ -45,11 +45,11 @@ async function createKafkaInstance(): Promise<Kafka> {
    return kafka;
 }
 
-async function createProducer(): Promise<Producer> {
-
+export async function createProducer(): Promise<Producer> {
    const kafkaInstance = await createKafkaInstance();
    producer = kafkaInstance.producer();
    await producer.connect();
+   console.log("Kafka Producer created")
    return producer;
 }
 

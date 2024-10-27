@@ -41,7 +41,7 @@ model StockBalance {
 
 model Market {
     id           String         @id @default(uuid())
-    title        String
+    stockSymbol  String         @default("")
     description  String
     startTime    DateTime
     endTime      DateTime

@@ -3,7 +3,6 @@ import http from "http";
 import WebSocket from "ws";
 import Redis from "ioredis";
 import { broadCastMessage } from "./utils/ws";
-
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({
@@ -12,10 +11,10 @@ const wss = new WebSocket.Server({
 export const rooms = new Map<string, Set<WebSocket>>();
 export const subscriber = new Redis({ port: 6379, host: "localhost" });
 subscriber.subscribe("MESSAGE")
-subscriber.on("message",async (message:string)=>{
-     const parsedData = JSON.parse(message);
-     const {room,orderBook} = parsedData;
-     broadCastMessage(room,JSON.stringify(orderBook))
+subscriber.on("message",async (channel:string,message:string)=>{
+  const parsedData = JSON.parse(message);
+     const {stockSymbol,orderBook} = parsedData.data;
+     broadCastMessage(stockSymbol,JSON.stringify(orderBook))
 })
 
 export const joinRoom = (room: string, ws: WebSocket) => {

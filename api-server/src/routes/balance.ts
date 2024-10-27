@@ -6,5 +6,4 @@ import { getInrBalanceByUserId, getStockBalanceByUserId } from "../controllers/b
 export const balanceRouter = express.Router();
 
 balanceRouter.get("/inr/", isAuthenticated,getInrBalanceByUserId)
-
 balanceRouter.get("/stock/", isAuthenticated,getStockBalanceByUserId)

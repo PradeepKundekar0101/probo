@@ -4,3 +4,5 @@
 */.env
 ./dist/*
 */src/prisma/migrations/*
+*/**/ */.DS_Store
+.DS_Store
