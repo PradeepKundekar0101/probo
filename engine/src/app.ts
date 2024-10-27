@@ -1,4 +1,4 @@
-import { handleBuy, handleSell } from './controller/order';
+import { handleBuy, handleSell,cancelOrder, getOrders } from './controller/order';
 import { createMarket } from './controller/market';
 import {redis} from './index'
 import { createUser } from './controller/user';
@@ -15,6 +15,10 @@ export const processMessages = async ()=>{
                 await createUser(data,eventId)
                 break;
 
+              case "ONRAMP":
+                await onRamp(data,eventId)
+                break
+
               case "GET_INR_BALANCE":
                 await getInrBalanceByUserId(data,eventId)
                 break;
@@ -30,12 +34,19 @@ export const processMessages = async ()=>{
               case "BUY_STOCK":
                 await handleBuy(data,eventId);
                 break;
+
               case "SELL_STOCK":
                 await handleSell(data,eventId);
                 break;
-              case "ONRAMP":
-                await onRamp(data,eventId)
-                break
+
+              case "GET_ORDERS":
+                  await getOrders(data,eventId);
+                  break;
+              case "CANCEL":
+                await cancelOrder(data,eventId);
+                break;
+
+            
             }
         }
     } catch (error) {

@@ -46,9 +46,9 @@ export const createUser = catchAsync(async(req:Request,res:Response)=>{
     const user = await prismaClient.user.create({data:{
         username,password:hashedPassword,email,phonenumber
     }})
-    await prismaClient.inrBalance.create({
-        data:{userId:user.id,locked:0,balance:0}
-    })
+    // await prismaClient.inrBalance.create({
+    //     data:{userId:user.id,locked:0,balance:0}
+    // })
     pushToQueue("CREATE_USER",user.id)
     const token = jwt.sign({id:user.id},JWT_SECRET!)
     return sendResponse(res,201,{message:"User created",data:{

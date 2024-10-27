@@ -1,5 +1,6 @@
-import { GlobalData } from "../db";
+import { GlobalData, ordersList } from "../db";
 import { produceMessage } from "../services/kafka";
+import { OrderListItem } from "../types/orderList";
 
 export const isOrderValid = (
   userId: string,
@@ -46,6 +47,7 @@ export const mintOrder = (
   };
 };
 
+// orderHelper.ts - Updated buy function
 export const buy = (
   userId: string,
   stockSymbol: string,
@@ -53,7 +55,6 @@ export const buy = (
   price: number,
   stockType: "yes" | "no"
 ) => {
-
   if (!isOrderValid(userId, quantity, price))
     return {error: "Invalid order" };
   if (!GlobalData.orderBook[stockSymbol]) return { error:"Invalid stock symbol" };
@@ -61,6 +62,7 @@ export const buy = (
   initializeStockBalance(userId, stockSymbol);
 
   const reverseStockType = stockType === "no" ? "yes" : "no";
+  const orderId = crypto.randomUUID();
 
   GlobalData.inrBalances[userId].balance -= quantity * price * 100;
   GlobalData.inrBalances[userId].locked += quantity * price * 100;
@@ -70,25 +72,30 @@ export const buy = (
     GlobalData.orderBook[stockSymbol][reverseStockType][10 - price]?.total || 0;
 
   let remainingQty = quantity;
+  let filledQty = 0;
 
   if (availableQuantity > 0) {
-    remainingQty = processOrders(
+    const processedQty = quantity - processOrders(
       stockSymbol,
       stockType,
       price,
       remainingQty,
       price
     );
+    remainingQty -= processedQty;
+    filledQty += processedQty;
   }
 
   if (availableReverseQuantity > 0 && remainingQty > 0) {
-    remainingQty = processOrders(
+    const processedQty = remainingQty - processOrders(
       stockSymbol,
       reverseStockType,
       10 - price,
       remainingQty,
       10 - price
     );
+    remainingQty -= processedQty;
+    filledQty += processedQty;
   }
 
   if (remainingQty > 0) {
@@ -101,71 +108,29 @@ export const buy = (
   }
 
   GlobalData.inrBalances[userId].locked -= (quantity - remainingQty) * price * 100;
-  const stockBalance = GlobalData.stockBalances[userId][stockSymbol]
-  const {yes,no} =stockBalance
-  const stock_message = {
-    operation:"UPDATE_STOCK_BALANCE",
-    data:{
-      userId,
-      noLocked:no.locked,
-      yesLocked:yes.locked,
-      stockSymbol,
-      yesQuantity:yes.quantity,
-      noQuantity:no.quantity
-    }
-  }
-  // produceMessage(JSON.stringify({message:stock_message}))
 
-  const inr_message = {
-    operation:"UPDATE_INR_BALANCE",
-    data:{userId,locked:GlobalData.inrBalances[userId].locked,balance:GlobalData.inrBalances[userId].balance}
-  }
-  // produceMessage(JSON.stringify({message:inr_message}))
+  // Track the order
+  const orderDetails: OrderListItem = {
+    id: orderId,
+    stockSymbol,
+    stockType,
+    createdAt: new Date().toISOString(),
+    userId,
+    quantity,
+    price: price * 100, // Store price in paisa
+    orderType: "buy",
+    totalPrice: quantity * price * 100
+  };
+  
+  GlobalData.ordersList.push(orderDetails);
+  
   return {
     message: `Buy order for '${stockType}' added for ${stockSymbol}`,
+    orderId
   };
 };
 
-const processOrders = (
-  stockSymbol: string,
-  orderType: "yes" | "no",
-  price: number,
-  quantity: number,
-  tradePrice: number
-): number => {
-  let remainingQty = quantity;
-  const orders = GlobalData.orderBook[stockSymbol][orderType][price].orders;
-
-  for (const sellerId in orders) {
-    if (remainingQty <= 0) break;
-
-    const available = orders[sellerId].quantity;
-    const toTake = Math.min(available, remainingQty);
-
-    orders[sellerId].quantity -= toTake;
-    GlobalData.orderBook[stockSymbol][orderType][price].total -= toTake;
-    remainingQty -= toTake;
-
-    if (orders[sellerId].type === "sell") {
-      if (GlobalData.stockBalances[sellerId][stockSymbol][orderType]) {
-        GlobalData.stockBalances[sellerId][stockSymbol][orderType].locked -= toTake;
-        GlobalData.inrBalances[sellerId].balance += toTake * tradePrice * 100;
-      }
-    } else {
-      const reverseType = orderType === "yes" ? "no" : "yes";
-      if (GlobalData.stockBalances[sellerId][stockSymbol][reverseType]) {
-        GlobalData.stockBalances[sellerId][stockSymbol][reverseType].quantity += toTake;
-        GlobalData.inrBalances[sellerId].locked -= toTake * tradePrice * 100;
-      }
-    }
-
-    if (orders[sellerId].quantity === 0) delete orders[sellerId];
-  }
-  if (GlobalData.orderBook[stockSymbol][orderType][price].total === 0)
-    delete GlobalData.orderBook[stockSymbol][orderType][price];
-  return remainingQty;
-};
-
+// orderHelper.ts - Updated sell function
 export const sell = (
   userId: string,
   stockSymbol: string,
@@ -182,13 +147,15 @@ export const sell = (
     !GlobalData.stockBalances[userId]?.[stockSymbol][stockType] ||
     GlobalData.stockBalances[userId][stockSymbol][stockType].quantity < quantity
   )
-    return { error: "Insufficient  stocks to sell" };
+    return { error: "Insufficient stocks to sell" };
+
+  const orderId = crypto.randomUUID();
+  const reverseStockType = stockType == "no" ? "yes" : "no";
+  let remainingQuantity = quantity;
+  let filledQuantity = 0;
 
   GlobalData.stockBalances[userId][stockSymbol][stockType].quantity -= quantity;
   GlobalData.stockBalances[userId][stockSymbol][stockType].locked += quantity;
-
-  const reverseStockType = stockType == "no" ? "yes" : "no";
-  let remainingQuantity = quantity;
 
   for (let p in GlobalData.orderBook[stockSymbol][reverseStockType]) {
     if (remainingQuantity <= 0) break;
@@ -205,6 +172,7 @@ export const sell = (
         matchedQuantity;
       GlobalData.orderBook[stockSymbol][reverseStockType][p].total -= matchedQuantity;
       remainingQuantity -= matchedQuantity;
+      filledQuantity += matchedQuantity;
 
       if (GlobalData.stockBalances[user][stockSymbol][reverseStockType]) {
         GlobalData.stockBalances[user][stockSymbol][reverseStockType].locked -=
@@ -239,7 +207,70 @@ export const sell = (
     GlobalData.orderBook[stockSymbol][stockType][price].orders[userId].quantity +=
       remainingQuantity;
   }
+
+  // Track the order
+  const orderDetails: OrderListItem = {
+    id: orderId,
+    stockSymbol,
+    stockType,
+    createdAt: new Date().toISOString(),
+    userId,
+    quantity,
+    price: price * 100, 
+    orderType: "sell",
+    totalPrice: quantity * price * 100
+  };
+  
+  GlobalData.ordersList.push(orderDetails);
+
   return {
-    message: `Sell order for 'yes' stock placed for ${stockSymbol}`,
+    message: `Sell order for ${stockType} stock placed for ${stockSymbol}`,
+    orderId
   };
 };
+
+
+
+const processOrders = (
+  stockSymbol: string,
+  orderType: "yes" | "no",
+  price: number,
+  quantity: number,
+  tradePrice: number
+): number => {
+  let remainingQty = quantity;
+  const orders = GlobalData.orderBook[stockSymbol][orderType][price].orders;
+ 
+  for (const sellerId in orders) {
+    if (remainingQty <= 0) break;
+
+    const available = orders[sellerId].quantity;
+    const toTake = Math.min(available, remainingQty);
+
+    orders[sellerId].quantity -= toTake;
+    GlobalData.orderBook[stockSymbol][orderType][price].total -= toTake;
+    remainingQty -= toTake;
+
+    if (orders[sellerId].type === "sell") {
+      if (GlobalData.stockBalances[sellerId][stockSymbol][orderType]) {
+        GlobalData.stockBalances[sellerId][stockSymbol][orderType].locked -= toTake;
+        GlobalData.inrBalances[sellerId].balance += toTake * tradePrice * 100;
+      }
+    } else {
+      const reverseType = orderType === "yes" ? "no" : "yes";
+      if (GlobalData.stockBalances[sellerId][stockSymbol][reverseType]) {
+        GlobalData.stockBalances[sellerId][stockSymbol][reverseType].quantity += toTake;
+        GlobalData.inrBalances[sellerId].locked -= toTake * tradePrice * 100;
+      }
+    }
+
+    if (orders[sellerId].quantity === 0) delete orders[sellerId];
+  }
+  if (GlobalData.orderBook[stockSymbol][orderType][price].total === 0)
+    delete GlobalData.orderBook[stockSymbol][orderType][price];
+ 
+  return remainingQty;
+};
+
+
+

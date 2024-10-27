@@ -8,7 +8,7 @@ export const createMarket = async (data:Market,eventId:string)=>{
     {
         if(GlobalData.markets[stockSymbol]) 
             return publishMessage(message(409,`${stockSymbol} already taken `,null),eventId)
-        GlobalData.markets[stockSymbol]={ startTime,stockSymbol,description,endTime,title,result,categoryType}
+        GlobalData.markets[stockSymbol]={ startTime,stockSymbol,description,endTime,title,result,categoryType,isOpen:true}
         GlobalData.orderBook[stockSymbol]={
             yes:{},
             no:{}
