@@ -4,7 +4,7 @@ import "../global.css"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import {GestureHandlerRootView} from "react-native-gesture-handler"
 import { StatusBar } from "react-native";
 
 const queryClient = new QueryClient();
@@ -13,11 +13,14 @@ const Layout = () => {
   const { token } = useAuthStore();
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar barStyle="light-content" backgroundColor={"white"} />
       <SafeAreaView style={{ flex: 1 }}>
-        <Stack
+      <StatusBar hidden />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack
           screenOptions={{
             headerShown: false,
+            contentStyle: { backgroundColor: '#000' },
+
           }}
         >
           {token ? (
@@ -34,6 +37,7 @@ const Layout = () => {
             </>
           )}
         </Stack>
+        </GestureHandlerRootView>
       </SafeAreaView>
     </QueryClientProvider>
   );

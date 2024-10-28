@@ -8,7 +8,9 @@ import { SnapShotManager } from "./services/snapshot";
 import { GlobalData } from "./db";
 export const app = express();
 dotenv.config();
-export const redis = new Redis({ port: 6379, host: "localhost" });
+const REDIS_URL = process.env.REDIS_URL
+
+export const redis = new Redis(REDIS_URL!);
 
 const pollQueue = async () => {
   while (true) {
@@ -21,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 5000,
+  interval: 10000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });

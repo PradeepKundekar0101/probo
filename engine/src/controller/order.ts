@@ -1,6 +1,6 @@
 
 
-import { GlobalData, orderBook } from "../db";
+import { GlobalData, orderBook, stockBalances } from "../db";
 import { buy,sell } from "../utils/orderHelper";
 import { message, publishMessage } from "../services/redis";
 interface OrderData {
@@ -81,3 +81,15 @@ export const getOrders = async (data: string, eventId: string) => {
     );
   }
 };
+
+export const exit = async (data:{stockSymbol:string,userId:string},eventId:string)=>{
+  const { userId, stockSymbol } = data;
+  // const stockBalances = GlobalData.stockBalances[userId][stockSymbol]
+  // const price = sellerPrice/100;
+  // const response = sell(userId, stockSymbol, quantity, price,stockType)
+  // if(response.error)
+  //   return publishMessage(message(400, response.error, null), eventId);
+  // const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
+  // publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
+  // publishMessage(message(200, `Sold`, null),eventId);
+}

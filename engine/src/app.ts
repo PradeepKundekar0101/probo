@@ -1,9 +1,10 @@
-import { handleBuy, handleSell,cancelOrder, getOrders } from './controller/order';
+import { handleBuy, handleSell,cancelOrder, getOrders, exit } from './controller/order';
 import { createMarket } from './controller/market';
 import {redis} from './index'
 import { createUser } from './controller/user';
 import { onRamp } from './controller/onramp';
 import { getInrBalanceByUserId, getStockBalanceByUserId } from './controller/balance';
+import { getOrderBook } from './controller/orderBook';
 export const processMessages = async ()=>{
     try {
         const message = await redis.rpop("messageQueue");
@@ -13,6 +14,9 @@ export const processMessages = async ()=>{
             switch (endPoint) {
               case "CREATE_USER":
                 await createUser(data,eventId)
+                break;
+              case "GET_ORDER_BOOK":
+                await getOrderBook(eventId)
                 break;
 
               case "ONRAMP":
@@ -44,6 +48,9 @@ export const processMessages = async ()=>{
                   break;
               case "CANCEL":
                 await cancelOrder(data,eventId);
+                break;
+              case "EXIT":
+                await exit(data,eventId);
                 break;
 
             

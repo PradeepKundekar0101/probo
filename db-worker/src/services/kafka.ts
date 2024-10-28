@@ -81,7 +81,7 @@ async function processMessage(operation: string, data: any, pause: () => void): 
       
         break;
       default:
-        console.warn(`Unknown operation: ${operation}`);
+        // console.warn(`Unknown operation: ${operation}`);
     }
   } catch (error) {
     console.error(`Error processing message (${operation}):`, error);

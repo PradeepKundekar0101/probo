@@ -1,8 +1,11 @@
 import Redis from "ioredis";
 import { generateId } from "../utils/generateOrderId";
+import dotenv from "dotenv"
+dotenv.config()
 
-export const redis = new Redis({ port: 6379, host: "localhost" });
-export const subscriber = new Redis({ port: 6379, host: "localhost" });
+const REDIS_URL = process.env.REDIS_URL
+export const redis = new Redis(REDIS_URL!);
+export const subscriber = new Redis(REDIS_URL!);
 export async function pushToQueue(endPoint: string, data: any, res?: any) {
   try {
     const eventId = generateId(); 

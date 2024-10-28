@@ -8,17 +8,37 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({
   server,
 });
+import dotenv from "dotenv"
+dotenv.config()
 export const rooms = new Map<string, Set<WebSocket>>();
-export const subscriber = new Redis({ port: 6379, host: "localhost" });
+const REDIS_URL = process.env.REDIS_URL!
+export const subscriber = new Redis(REDIS_URL);
 subscriber.subscribe("MESSAGE");
 subscriber.subscribe("MARKET_SETTLEMENT");
 subscriber.on("message", async (channel: string, message: string) => {
   if (channel === "MESSAGE") {
     const parsedData = JSON.parse(message);
     const { stockSymbol, orderBook } = parsedData.data;
-    broadCastMessage(stockSymbol, JSON.stringify(orderBook));
+
+    let parsedOrderBookTemp = JSON.parse(orderBook)
+    const yesOrders = parsedOrderBookTemp["yes"]
+    const noOrders = parsedOrderBookTemp["no"]
+    let tempOrder={yes:{},no:{}}
+    Object.keys(yesOrders).map((price)=>{
+        const total = parsedOrderBookTemp["yes"][price].total
+        //@ts-ignore
+        tempOrder.yes[price] = total
+    })
+    Object.keys(noOrders).map((price)=>{
+      const total = parsedOrderBookTemp["no"][price].total
+      //@ts-ignore
+      tempOrder.no[price] = total
+  })
+
+    broadCastMessage(stockSymbol, JSON.stringify(tempOrder));
   } else if (channel === "MARKET_SETTLEMENT") {
     const parsedData = JSON.parse(message);
+
     const { marketId } = parsedData.data;
     broadCastMessage(marketId, JSON.stringify(parsedData));
   }

@@ -38,14 +38,19 @@ const CreateAccount = () => {
 
     mutate(formData, {
       onSuccess: async (data) => {
-
-        setToken(data?.data?.data?.token);
-        setUser(data?.data?.data?.user);
-        await storeToken(data?.data?.data?.token);
-        await storeUser(data?.data?.data?.user);
+        console.log(data)
+        if(data.status===409){
+            console.log(data.data)
+            
+        }
+        setToken(data.data?.data?.data?.token);
+        setUser(data.data?.data?.data?.user);
+        await storeToken(data.data?.data?.data?.token);
+        await storeUser(data.data?.data?.data?.user);
         router.replace("(tabs)/home");
       },
       onError: (error) => {
+        console.log(error)
         Alert.alert("Error", "Failed to create an account. Please try again.");
         console.error("Account creation error:", error);
       },
