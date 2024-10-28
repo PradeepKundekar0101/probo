@@ -3,7 +3,7 @@ import { Slot, useRouter } from "expo-router";
 import { useAuthStore } from "../src/store/authStore";
 import { getToken, getUser } from "../src/utils/storage";
 import { LogBox } from 'react-native';
-console.warn = () => {};
+// console.warn = () => {};
 
 LogBox.ignoreLogs([]); 
 

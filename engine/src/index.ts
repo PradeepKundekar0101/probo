@@ -6,11 +6,11 @@ import express from "express";
 import { createProducer } from "./services/kafka";
 import { SnapShotManager } from "./services/snapshot";
 import { GlobalData } from "./db";
-
 export const app = express();
-
 dotenv.config();
-export const redis = new Redis({ port: 6379, host: "localhost" });
+const REDIS_URL = process.env.REDIS_URL
+
+export const redis = new Redis(REDIS_URL!);
 
 const pollQueue = async () => {
   while (true) {
@@ -23,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 5000,
+  interval: 10000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });
@@ -65,19 +65,12 @@ const startServer = async () => {
 
 
     process.on("SIGTERM", async () => {
-      console.log("Received SIGTERM signal, initiating graceful shutdown...");
-      
-
       snapshotManager.stopSnapShotting();
-      
-
       try {
         await snapshotManager.createSnapShot();
-        console.log("Final snapshot created successfully");
       } catch (error) {
         console.error("Failed to create final snapshot:", error);
       }
-      
       process.exit(0);
     });
 
@@ -86,7 +79,6 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
 
 startServer().catch(error => {
   console.error("Failed to start server:", error);

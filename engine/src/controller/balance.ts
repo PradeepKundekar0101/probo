@@ -37,11 +37,14 @@ export const getStockBalanceByUserId = async (
 ) => {
   try {
     console.log(userId);
-    if (!stockBalances[userId])
-      return publishMessage(
-        message(404, `${userId} does not exist`, null),
-        eventId
-      );
+    if (!stockBalances[userId]){
+      publishMessage(
+       message(404, `${userId} does not exist`, null),
+       eventId
+     );
+     return
+    }
+      
     publishMessage(message(200, "Success", stockBalances[userId]), eventId);
   } catch (error) {
     console.log(error);

@@ -14,29 +14,29 @@ export const onRampAmount = catchAsync(async (req: AuthRequest, res: Response) =
         });
         return;
     }
-    const inrBalance = await prismaClient.inrBalance.findFirst({
-        where: { userId },
-    });
-    if (!inrBalance) {
-        return sendResponse(res, 404, {
-            message: "INR balance not found",
-            data: null,
-        });
-    }
-    const updatedInrBalance = await prismaClient.inrBalance.update({
-        where: { id: inrBalance.id },
-        data: {
-            balance: {
-                increment: amount, 
-            },
-        },
-    });
-    console.log({userId,amount})
-    pushToQueue("ONRAMP",{userId,amount})
+    // const inrBalance = await prismaClient.inrBalance.findFirst({
+    //     where: { userId },
+    // });
+    // if (!inrBalance) {
+    //     return sendResponse(res, 404, {
+    //         message: "INR balance not found",
+    //         data: null,
+    //     });
+    // }
+    // const updatedInrBalance = await prismaClient.inrBalance.update({
+    //     where: { id: inrBalance.id },
+    //     data: {
+    //         balance: {
+    //             increment: amount, 
+    //         },
+    //     },
+    // });
+    // console.log({userId,amount})
+    pushToQueue("ONRAMP",{userId,amount},res)
 
 
-    return sendResponse(res, 200, {
-        message: "Success",
-        data: updatedInrBalance,
-    });
+    // return sendResponse(res, 200, {
+    //     message: "Success",
+    //     data: updatedInrBalance,
+    // });
 });

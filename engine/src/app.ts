@@ -1,9 +1,10 @@
-import { handleBuy, handleSell } from './controller/order';
+import { handleBuy, handleSell,cancelOrder, getOrders, exit } from './controller/order';
 import { createMarket } from './controller/market';
 import {redis} from './index'
 import { createUser } from './controller/user';
 import { onRamp } from './controller/onramp';
 import { getInrBalanceByUserId, getStockBalanceByUserId } from './controller/balance';
+import { getOrderBook } from './controller/orderBook';
 export const processMessages = async ()=>{
     try {
         const message = await redis.rpop("messageQueue");
@@ -14,6 +15,13 @@ export const processMessages = async ()=>{
               case "CREATE_USER":
                 await createUser(data,eventId)
                 break;
+              case "GET_ORDER_BOOK":
+                await getOrderBook(eventId)
+                break;
+
+              case "ONRAMP":
+                await onRamp(data,eventId)
+                break
 
               case "GET_INR_BALANCE":
                 await getInrBalanceByUserId(data,eventId)
@@ -30,12 +38,22 @@ export const processMessages = async ()=>{
               case "BUY_STOCK":
                 await handleBuy(data,eventId);
                 break;
+
               case "SELL_STOCK":
                 await handleSell(data,eventId);
                 break;
-              case "ONRAMP":
-                await onRamp(data,eventId)
-                break
+
+              case "GET_ORDERS":
+                  await getOrders(data,eventId);
+                  break;
+              case "CANCEL":
+                await cancelOrder(data,eventId);
+                break;
+              case "EXIT":
+                await exit(data,eventId);
+                break;
+
+            
             }
         }
     } catch (error) {

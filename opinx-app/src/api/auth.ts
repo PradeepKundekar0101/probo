@@ -37,12 +37,12 @@ export const useCreateAccount = () => {
         "/user/create",
         accountData
       );
-      return response.data;
+      return response;
     },
 
     onSuccess: (data) => {
-      setToken(data.token);
-      setUser(data.user);
+      setToken(data.data.token);
+      setUser(data.data.user);
     },
     onError: (error) => {
       console.log("Account creation error:", error);

@@ -1,13 +1,13 @@
-import { inrBalances, stockBalances } from "../db"
+import { GlobalData } from "../db"
 import { message, publishMessage } from "../services/redis"
 export const createUser = async (userId:string,eventId:string)=>{
     try
     {
-        if(inrBalances[userId])
+        if(GlobalData.inrBalances[userId])
             return publishMessage(message(400,"User name already taken",null),eventId)
-        inrBalances[userId]={balance:0,locked:0}
-        stockBalances[userId]={}
-        publishMessage(message(201,"User created",inrBalances[userId]),eventId)
+        GlobalData.inrBalances[userId]={balance:0,locked:0}
+        GlobalData.stockBalances[userId]={}
+        publishMessage(message(201,"User created",GlobalData.inrBalances[userId]),eventId)
    }
     catch (error:any)
     {
