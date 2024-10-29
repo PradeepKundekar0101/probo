@@ -1,7 +1,7 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
 import { processMessages } from "./app";
-import { settleMarketsOnClose } from "./controller/settleMarket";
+// import { settleMarketsOnClose } from "./controller/settleMarket";
 import express from "express";
 import { createProducer } from "./services/kafka";
 import { SnapShotManager } from "./services/snapshot";
@@ -23,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 10000,
+  interval: 100000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });
@@ -55,9 +55,9 @@ const startServer = async () => {
     snapshotManager.startSnapShotting();
     
 
-    setTimeout(() => {
-      settleMarketsOnClose();
-    }, 5000);
+    // setTimeout(() => {
+    //   settleMarketsOnClose();
+    // }, 5000);
 
     app.listen(8001, () => {
       console.log("API server Listening at 8001");

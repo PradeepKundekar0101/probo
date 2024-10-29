@@ -1,9 +1,9 @@
-import { inrBalances, stockBalances } from "../db";
+import { GlobalData, inrBalances, stockBalances } from "../db";
 import { message, publishMessage } from "../services/redis";
 
 export const getInrBalanceAll = async (eventId: string) => {
   try {
-    publishMessage(message(200, "Success", inrBalances), eventId);
+    publishMessage(message(200, "Success", GlobalData.inrBalances), eventId);
   } catch (error) {
     console.log(error);
   }
@@ -13,12 +13,12 @@ export const getInrBalanceByUserId = async (
   eventId: string
 ) => {
   try {
-    if (!inrBalances[userId])
+    if (!GlobalData.inrBalances[userId])
       return publishMessage(
         message(404, `${userId} does not exist`, null),
         eventId
       );
-    publishMessage(message(200, "Success", inrBalances[userId]), eventId);
+    publishMessage(message(200, "Success", GlobalData.inrBalances[userId]), eventId);
   } catch (error) {
     console.log(error);
   }
@@ -26,7 +26,7 @@ export const getInrBalanceByUserId = async (
 
 export const getStockBalanceAll = async (eventId: string) => {
   try {
-    publishMessage(message(200, "Success", stockBalances), eventId);
+    publishMessage(message(200, "Success", GlobalData.stockBalances), eventId);
   } catch (error) {
     console.log(error);
   }
@@ -37,7 +37,7 @@ export const getStockBalanceByUserId = async (
 ) => {
   try {
     console.log(userId);
-    if (!stockBalances[userId]){
+    if (!GlobalData.stockBalances[userId]){
       publishMessage(
        message(404, `${userId} does not exist`, null),
        eventId
@@ -45,7 +45,7 @@ export const getStockBalanceByUserId = async (
      return
     }
       
-    publishMessage(message(200, "Success", stockBalances[userId]), eventId);
+    publishMessage(message(200, "Success", GlobalData.stockBalances[userId]), eventId);
   } catch (error) {
     console.log(error);
   }

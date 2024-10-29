@@ -1,7 +1,7 @@
 
 
-import { GlobalData, orderBook, stockBalances } from "../db";
-import { buy,sell } from "../utils/orderHelper";
+import { GlobalData} from "../db";
+import { buyNoOption,buyYesOption,sellNoOption,sellYesOption } from "../utils/orderHelper";
 import { message, publishMessage } from "../services/redis";
 interface OrderData {
   price: number;
@@ -17,12 +17,10 @@ interface OrderCancelData {
 export const handleBuy = async (data:OrderData,eventId:string)=>{
     const { userId, stockSymbol, quantity, price:buyerPrice, stockType } = data;
     const price = buyerPrice/100;
-    const response = buy(userId, stockSymbol, quantity, price,stockType)
-    if(response.error){
-      console.log("error")
-      console.log(response.error)
+    const response  = stockType ==="yes" ? buyYesOption(userId,stockSymbol,quantity,price) : buyNoOption(userId,stockSymbol,quantity,price);
+    if(!response) return publishMessage(message(400, "Invalid paramas", null), eventId);
+    if(response.error)
       return publishMessage(message(400, response.error, null), eventId);
-    }
     const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
     publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
     publishMessage(message(200, `Buy successful`, null),eventId);
@@ -31,9 +29,9 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
 export const handleSell = async (data:OrderData,eventId:string)=>{
   const { userId, stockSymbol, quantity, price:sellerPrice, stockType } = data;
   const price = sellerPrice/100;
-  const response = sell(userId, stockSymbol, quantity, price,stockType)
-  if(response.error)
-    return publishMessage(message(400, response.error, null), eventId);
+  const response = stockType == "no"?sellNoOption(userId, stockSymbol, quantity, price):sellYesOption(userId, stockSymbol, quantity, price)
+  if(!response) return publishMessage(message(400, "Invalid paramas", null), eventId);
+  if(response.error) return publishMessage(message(400, response.error, null), eventId);
   const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
   publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
   publishMessage(message(200, `Sold`, null),eventId);
@@ -62,11 +60,11 @@ export const cancelOrder = async (data:OrderCancelData,eventId:string)=>{
     publishMessage(message(200, `Order cancelled`, null),eventId);
 }
 
-// controller/order.ts - Updated getOrders function
+
 export const getOrders = async (data: string, eventId: string) => {
   try {
     const orders = GlobalData.ordersList.filter((order) => order.userId === data)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     publishMessage(
       message(200, "Orders retrieved successfully", { orders }), 

@@ -1,5 +1,5 @@
 import { handleBuy, handleSell,cancelOrder, getOrders, exit } from './controller/order';
-import { createMarket } from './controller/market';
+import { createMarket, settleMarket } from './controller/market';
 import {redis} from './index'
 import { createUser } from './controller/user';
 import { onRamp } from './controller/onramp';
@@ -15,6 +15,7 @@ export const processMessages = async ()=>{
               case "CREATE_USER":
                 await createUser(data,eventId)
                 break;
+              
               case "GET_ORDER_BOOK":
                 await getOrderBook(eventId)
                 break;
@@ -43,17 +44,23 @@ export const processMessages = async ()=>{
                 await handleSell(data,eventId);
                 break;
 
-              case "GET_ORDERS":
-                  await getOrders(data,eventId);
-                  break;
-              case "CANCEL":
-                await cancelOrder(data,eventId);
-                break;
+                
               case "EXIT":
-                await exit(data,eventId);
-                break;
-
-            
+                  await exit(data,eventId);
+                  break;
+                
+              case "SETTLE_MARKET":
+                  await settleMarket(data,eventId);
+                  break;
+                  
+                  // case "GET_ORDERS":
+                  //     await getOrders(data,eventId);
+                  //     break;
+                  
+                  // case "CANCEL":
+                  //   await cancelOrder(data,eventId);
+                  //   break;
+              
             }
         }
     } catch (error) {
