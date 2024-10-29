@@ -7,6 +7,7 @@ export interface User{
 }
 
 export interface Market {
+    id:string,  
 
     title: string;
     description: string;
@@ -14,8 +15,8 @@ export interface Market {
     endTime: Date;
     result: "yes" | "no" | null;
     categoryId:string,
-    id:string,
-    thumbnail:string
+    thumbnail:string,
+    sourceOfTruth:string
   }
   export interface Category{
     categoryName:string,

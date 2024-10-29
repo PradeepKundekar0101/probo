@@ -10,7 +10,7 @@ const LoginPage = lazy((): any => import("../pages/Auth/Login"));
 const Dashboard = lazy((): any => import("../pages/Dashboard"));
 const Categories = lazy((): any => import("../pages/Dashboard/Categories"));
 const NotFound = lazy((): any => import("../pages/NotFound"));
-
+const CreateMarket = lazy(()=>import("../pages/Dashboard/CreateMarket"))
 const router = createBrowserRouter([
   {
     path: "/",
@@ -34,6 +34,16 @@ const router = createBrowserRouter([
           <Suspense fallback={<Loader />}>
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          </Suspense>
+        ),
+      },
+      {
+        path: "createMarket",
+        element: (
+          <Suspense fallback={<Loader />}>
+            <ProtectedRoute>
+              <CreateMarket />
             </ProtectedRoute>
           </Suspense>
         ),

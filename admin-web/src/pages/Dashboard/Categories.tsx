@@ -1,4 +1,5 @@
-import { Card, CardDescription, CardHeader } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import useAxios from '@/hooks/use-axios';
 import { Category } from '@/types/data';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,7 +10,6 @@ import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, Dr
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
-
 import { useToast } from '@/hooks/use-toast';
 
 const Categories = () => {
@@ -18,22 +18,20 @@ const Categories = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [categoryTitle, setCategoryTitle] = useState("");
     const [icon, setIcon] = useState<File | null>(null);
-    const { toast } = useToast()
+    const { toast } = useToast();
 
-    // Query for fetching categories
     const {
         data: categoriesData,
         isLoading,
         isError,
         error,
     } = useQuery({
-        queryKey: ["categories"], // Fixed typo in queryKey
+        queryKey: ["categories"],
         queryFn: async () => {
             return (await api.get("/market/getCategories")).data;
         },
     });
 
-    // Mutation for creating a category
     const createMutation = useMutation({
         mutationFn: async () => {
             if (!icon || !categoryTitle.trim()) {
@@ -51,15 +49,10 @@ const Categories = () => {
             });
         },
         onSuccess: () => {
-            // Reset form
             setCategoryTitle("");
             setIcon(null);
             setIsOpen(false);
-            
-            // Invalidate and refetch categories
             queryClient.invalidateQueries({ queryKey: ["categories"] });
-            
-            // Show success message
             toast({
                 title: "Success",
                 description: "Category created successfully",
@@ -87,11 +80,11 @@ const Categories = () => {
 
     return (
         <CustomLayout>
-            <section>
-                <div className="flex items-center justify-between">
+            <section className="w-[80%]">
+                <div className="flex items-center justify-between mb-6">
                     <div>
                         <h1 className="text-2xl font-semibold text-left mb-2">Markets</h1>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-sm text-muted-foreground">
                             Create and manage prediction markets
                         </p>
                     </div>
@@ -174,24 +167,48 @@ const Categories = () => {
                         <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                        {categoriesData?.data?.map((category: Category) => (
-                            <Card key={category.id || category.id}>
-                                <CardHeader>
-                                    <img 
-                                        className="h-28 w-28 object-cover rounded-lg mx-auto" 
-                                        src={category.icon}
-                                        alt={category.categoryName}
-                                    />
-                                </CardHeader>
-                                <CardDescription className="text-center p-4">
-                                    <h2 className="text-lg font-medium">
-                                        {category.categoryName}
-                                    </h2>
-                                </CardDescription>
-                            </Card>
-                        ))}
-                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Icon</TableHead>
+                                <TableHead>Category Name</TableHead>
+                                <TableHead>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {categoriesData?.data?.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center">
+                                        No categories found
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                categoriesData?.data?.map((category: Category) => (
+                                    <TableRow key={category.id}>
+                                        <TableCell>
+                                            <img 
+                                                src={category.icon}
+                                                alt={category.categoryName}
+                                                className="h-12 w-12 object-cover rounded-lg"
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {category.categoryName}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-blue-600 hover:text-blue-700"
+                                            >
+                                                View Markets
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
                 )}
             </section>
         </CustomLayout>

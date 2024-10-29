@@ -11,33 +11,33 @@ interface CreateMarketRequest {
   startTime: string;
   endTime: string;
   categoryId: string;
-  categoryType:string
+  sourceOfTruth:string
 }
 
 export const createMarket = catchAsync(async (req: Request, res: Response) => {
   const { 
-    stockSymbol, 
+    title, 
     description, 
     startTime, 
     endTime,
     categoryId,
-    categoryType
+    sourceOfTruth
   }: CreateMarketRequest = req.body;
 
-  if (  !stockSymbol || !description || !startTime || !endTime || !categoryId || !categoryType) {
+  if (  !title || !description || !startTime || !endTime || !categoryId || !sourceOfTruth) {
     return sendResponse(res, 400, {
-      message: "All fields ( stockSymbol, description, startTime, endTime, categoryId,categoryType) are required",
+      message: "All fields ( title, description, startTime, endTime, categoryId,categoryType) are required",
       data: null,
     });
   }
   
   try {
     const image = req.file as unknown as Express.Multer.File;
-    const fileName = `${stockSymbol}-${image.originalname}`;
+    const fileName = `${title}-${image.originalname}`; 
     const destination = await putObjectURL(image, fileName);
     const fileUrl = getObjectURL(destination);
     const existingStockSymbol = await prismaClient.market.findFirst({where:{
-      stockSymbol
+      title
     }})
 
 
@@ -71,13 +71,13 @@ export const createMarket = catchAsync(async (req: Request, res: Response) => {
     }
     const market = await prismaClient.market.create({
       data: {
-        stockSymbol,
+        title,
         description,
         startTime: parsedStartTime,
         endTime: parsedEndTime,
         thumbnail:fileUrl,
         categoryId, 
-        categoryType
+        sourceOfTruth
       }
     });
 
@@ -122,10 +122,45 @@ export const createCategory = catchAsync(async(req:Request,res:Response)=>{
 })
 
 export const getMarkets = catchAsync(async(req:Request,res:Response)=>{
-  const markets = await prismaClient.market.findMany({})  
+  const categoryId=req.query.categoryId
+  let markets;
+  if(!categoryId){
+      markets = await prismaClient.market.findMany({})  
+  }else{
+    markets = await prismaClient.market.findMany({where:{categoryId:categoryId as string}})
+  }
   sendResponse(res,200,markets)
 })
 export const getCategories = catchAsync(async(req:Request,res:Response)=>{
   const categories = await prismaClient.category.findMany({})  
   sendResponse(res,200,categories)
 })
+
+export const settleMarket = catchAsync(async(req:Request,res:Response)=>{
+  const {marketId,value}:{
+    marketId:string,
+    value:"yes"|"no"
+  } = req.body;
+  const market = await prismaClient.market.findFirst({where:{id:marketId}})
+  if(!market){
+    sendResponse(res,404,{message:"Market not found"})
+    return;
+  }
+  const currentTime = new Date().getTime()
+  const endTime = new Date(market.endTime).getTime();
+  if(endTime>currentTime){
+    sendResponse(res,400,{message:"Market not closed yet"})
+    return
+  }
+  console.log(value)
+  const updated = await prismaClient.market.update({
+    where:{id:marketId},data:{
+      result:value
+    }
+  })
+  console.log(updated)
+  pushToQueue("SETTLE_MARKET",{result:value,stockSymbol:marketId},res)
+
+})
+
+
