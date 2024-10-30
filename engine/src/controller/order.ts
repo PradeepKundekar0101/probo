@@ -3,6 +3,7 @@
 import { GlobalData} from "../db";
 import { buyNoOption,buyYesOption,sellNoOption,sellYesOption } from "../utils/orderHelper";
 import { message, publishMessage } from "../services/redis";
+import { produceMessage } from "../services/kafka";
 interface OrderData {
   price: number;
   userId: string;
@@ -22,6 +23,9 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
     if(response.error)
       return publishMessage(message(400, response.error, null), eventId);
     const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
+    if(!GlobalData.traders[stockSymbol]) GlobalData.traders[stockSymbol]= new Set()
+    GlobalData.traders[stockSymbol].add(userId)
+    produceMessage(JSON.stringify({message:{operation:"UPDATE_TRADER_COUNT",data:{id:stockSymbol,count:GlobalData.traders[stockSymbol].size}}}))
     publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
     publishMessage(message(200, `Buy successful`, null),eventId);
 }

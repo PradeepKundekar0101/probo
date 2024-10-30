@@ -3,12 +3,26 @@ import useAxios from "@/hooks/use-axios";
 import Navbar from "@/layout/Navbar";
 import { Category, Market } from "@/types/data";
 import { useQuery } from "@tanstack/react-query";
-import { Users } from "lucide-react";
+import {  CheckCircle2, Users } from "lucide-react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 
-import MarketDrawer from "./drawer";
+} from "@/components/ui/dialog";
+
+import MarketDrawer from "./drawer-market";
+import MarketDetailsDrawer from "./drawer-details";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const Home = () => {
   const api = useAxios();
+  const [modalOpen,setModalOpen] = useState(false)
+
   const { data: categoryData } = useQuery({
     queryKey: ["category"],
     queryFn: async () => {
@@ -21,10 +35,35 @@ const Home = () => {
       return (await api.get("/market/getMarkets")).data;
     },
   });
+
+  const { data: inrBalanceData } = useQuery({
+    queryKey: ["inr_balance"],
+    queryFn: async () => {
+      return api.get("/balance/inr");
+    },
+  });
   console.log(marketData);
 
   return (
     <Navbar>
+      <Dialog  open={modalOpen}>
+        <DialogContent>
+          <DialogHeader >
+            <DialogTitle className=" text-center">Success</DialogTitle>
+           
+            <DialogDescription className="text-center">
+              <div className="flex justify-center">
+                <CheckCircle2 color="green" />
+              </div>
+              This action cannot be undone. This will permanently delete your
+              account and remove your data from our servers.
+            </DialogDescription>
+            <DialogClose asChild>
+              <Button onClick={()=>{setModalOpen(false)}} variant={"outline"}>Close </Button>
+            </DialogClose>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       <section>
         <section className="my-2">
           {/* <h1 className="text-xl mb-2">Top Categories</h1> */}
@@ -49,34 +88,63 @@ const Home = () => {
         <section className="my-2">
           <h1 className="text-xl mb-2">Open Markets</h1>
           <div className="grid grid-cols-3 gap-2">
-            {marketData &&
-              marketData.data?.map((market: Market) => ( !market.result && new Date(market.endTime).getTime() > new Date().getTime () &&
-                <Card className="overflow-hidden h-52" key={market.description}>
-                  <div className="p-4">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={market.thumbnail}
-                        alt=""
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                      <h2 className="text-lg font-semibold flex-1">
-                        {market.description.split(".")[0]}
-                      </h2>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
-                      <Users className="w-4 h-4" />
-                      <span>{10} traders</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <MarketDrawer stockType="Yes" price={4} market={market}/>
-                      <MarketDrawer stockType="No" price={4} market={market}/>
-
-                    </div>
-                  </div>
-                </Card>
-              ))}
+            {}
+            {marketData && marketData.data?.length == 0 ? (
+              <div>
+                <h1>No markets open</h1>
+              </div>
+            ) : (
+              marketData?.data?.map(
+                (market: Market) =>
+                  !market.result &&
+                  new Date(market.endTime).getTime() > new Date().getTime() && (
+                    <Card className="overflow-hidden" key={market.description}>
+                      <div className="p-4">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={market.thumbnail}
+                            alt=""
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                          <h2 className="text-lg font-semibold flex-1">
+                            {market.title}
+                          </h2>
+                        </div>
+                        <div>
+                          <h1 className=" text-sm">
+                            {market.description.split(".")[0]}
+                          </h1>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
+                          <Users className="w-4 h-4" />
+                          <span>{market.numberOfTraders || 0} traders</span>
+                        </div>
+                        <MarketDetailsDrawer
+                          title={market.title}
+                          description={market.description}
+                          source={market.sourceOfTruth}
+                        />
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <MarketDrawer
+                          setModalOpen={setModalOpen}
+                            stockType="Yes"
+                            price={4}
+                            balance={inrBalanceData?.data?.data?.balance / 100}
+                            market={market as Market}
+                          />
+                          <MarketDrawer
+                          setModalOpen={setModalOpen}
+                            stockType="No"
+                            price={4}
+                            balance={inrBalanceData?.data?.data?.balance / 100}
+                            market={market as Market}
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  )
+              )
+            )}
           </div>
         </section>
       </section>

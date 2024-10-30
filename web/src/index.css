@@ -66,3 +66,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+.yesBar{
+  background-image: linear-gradient(90deg,#2a86db,#3c4fe0);
+  transition: 0.5s linear;
+}
+.noBar{
+  transition: 0.5s linear;
+  background-image: linear-gradient(90deg,#de548f,#e50119);
+}

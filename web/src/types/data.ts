@@ -20,7 +20,7 @@ export interface Market {
     result: "yes" | "no" | null;
     isOpen:boolean,
     sourceOfTruth?:string 
-
+    numberOfTraders:number
     thumbnail?:string
 
   }

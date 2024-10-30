@@ -40,19 +40,20 @@ model StockBalance {
 }
 
 model Market {
-    id            String         @id @default(uuid())
-    title         String         @default("")
-    stockSymbol   String         @default("")
-    description   String
-    startTime     DateTime
-    endTime       DateTime
-    result        String?
-    thumbnail     String?
-    category      Category       @relation(fields: [categoryId], references: [id])
-    categoryId    String
-    sourceOfTruth String         @default("")
-    StockBalance  StockBalance[]
-    Order         Order[]
+    id              String         @id @default(uuid())
+    title           String         @default("")
+    stockSymbol     String         @default("")
+    description     String
+    startTime       DateTime
+    endTime         DateTime
+    result          String?
+    thumbnail       String?
+    category        Category       @relation(fields: [categoryId], references: [id])
+    categoryId      String
+    sourceOfTruth   String         @default("")
+    StockBalance    StockBalance[]
+    Order           Order[]
+    numberOfTraders Int            @default(0)
 
     @@map("markets")
 }
