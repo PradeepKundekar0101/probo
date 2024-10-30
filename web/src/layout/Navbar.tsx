@@ -67,7 +67,7 @@ const Navbar = ({ children }: { children: React.ReactNode }) => {
     mutate()
   }
   return (
-    <section className="min-h-screen bg-background">
+    <section className="min-h-screen bg-[#f5f5f5]">
       <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

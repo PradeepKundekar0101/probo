@@ -10,3 +10,7 @@ export interface Market {
     tradersCnt:number;
     sourceOfTruth?:string;
   }
+
+  export interface Traders{
+    [stockSymbol:string]:Set<string>
+  }
