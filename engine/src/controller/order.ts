@@ -18,7 +18,19 @@ interface OrderCancelData {
 export const handleBuy = async (data:OrderData,eventId:string)=>{
     const { userId, stockSymbol, quantity, price:buyerPrice, stockType } = data;
     const price = buyerPrice/100;
-    const response  = stockType ==="yes" ? buyYesOption(userId,stockSymbol,quantity,price) : buyNoOption(userId,stockSymbol,quantity,price);
+    if(!GlobalData.orderBook[stockSymbol]){
+      return publishMessage(message(400, "Invalid paramas", null), eventId);
+    }
+    let availableQuantity = quantity
+      for( let i=1;i<price;i++){
+        if(GlobalData.orderBook[stockSymbol][stockType][i]){
+          const totalAvailable = GlobalData.orderBook[stockSymbol][stockType][i].total
+          const min = Math.min(totalAvailable,availableQuantity)
+          stockType==="yes" ? buyYesOption(userId,stockSymbol,min,i) : buyNoOption(userId,stockSymbol,min,i)
+          availableQuantity-=min
+        }
+      }
+    const response  = stockType ==="yes" ? buyYesOption(userId,stockSymbol,availableQuantity,price) : buyNoOption(userId,stockSymbol,availableQuantity,price);
     if(!response) return publishMessage(message(400, "Invalid paramas", null), eventId);
     if(response.error)
       return publishMessage(message(400, response.error, null), eventId);
@@ -84,14 +96,20 @@ export const getOrders = async (data: string, eventId: string) => {
   }
 };
 
-export const exit = async (data:{stockSymbol:string,userId:string},eventId:string)=>{
-  const { userId, stockSymbol } = data;
-  // const stockBalances = GlobalData.stockBalances[userId][stockSymbol]
-  // const price = sellerPrice/100;
-  // const response = sell(userId, stockSymbol, quantity, price,stockType)
-  // if(response.error)
-  //   return publishMessage(message(400, response.error, null), eventId);
-  // const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
-  // publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
-  // publishMessage(message(200, `Sold`, null),eventId);
+export const exit = async (data:{stockSymbol:string,userId:string,price:number,stockType:"yes"|"no",quantity:number},eventId:string)=>{
+  const { userId, stockSymbol,price,stockType,quantity } = data;
+  const stockBalances = GlobalData.stockBalances[userId][stockSymbol]
+  if(!stockBalances){
+    return publishMessage(message(400, "No stocks", null), eventId);
+  }
+  if(stockBalances[stockType].quantity<quantity)
+    return publishMessage(message(400, "Insuffient stocks", null), eventId);
+  const sellerPrice = price/100;
+   const response = stockType === "yes" ?  sellYesOption(userId, stockSymbol, quantity, sellerPrice):sellNoOption(userId,stockSymbol,quantity,sellerPrice)
+  if(response.error)
+    return publishMessage(message(400, response.error, null), eventId);
+  delete GlobalData.stockBalances[userId][stockSymbol]
+  const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
+  publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
+  publishMessage(message(200, `Sold`, null),eventId);
 }

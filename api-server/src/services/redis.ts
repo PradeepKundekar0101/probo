@@ -10,18 +10,18 @@ export async function pushToQueue(endPoint: string, data: any, res?: any) {
   try {
     const eventId = generateId(); 
     const message = { endPoint, data, eventId };
-    
-    const messageHandler = async (channel: string, messageFromPublisher: string) => {
-      if (channel === eventId) {
-        subscriber.unsubscribe(eventId); 
-        const { statusCode, message, data } = JSON.parse(messageFromPublisher);
-        res && res.status(statusCode).send({ message, data });
-      }
-    };
-    res && subscriber.subscribe(eventId); 
-    res && subscriber.on("message", messageHandler);
+    if(res){
+      const messageHandler = async (channel: string, messageFromPublisher: string) => {
+        if (channel === eventId) {
+          await subscriber.unsubscribe(eventId); 
+          const { statusCode, message, data } = JSON.parse(messageFromPublisher);
+          res.status(statusCode).send({ message, data });
+        }
+      };
+      await subscriber.subscribe(eventId); 
+      subscriber.on("message", messageHandler);
+    }
     await redis.lpush("messageQueue", JSON.stringify(message));
-
     console.log(`Waiting for response for event: ${eventId}`);
 
 
