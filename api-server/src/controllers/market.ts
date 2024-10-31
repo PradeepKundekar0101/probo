@@ -173,3 +173,11 @@ export const getMarketById = async (req:Request,res:Response)=>{
     const markets = await prismaClient.market.findFirst({where:{id:marketId}})
     sendResponse(res,200,{markets})
 }
+export const getPrices = async (req:Request,res:Response)=>{
+    const marketId = req.params.marketId;
+    if(!marketId){
+      sendResponse(res,400,{data:"Provide marketId"})
+      return
+    }
+    pushToQueue("GET_PRICE",marketId,res)
+}

@@ -16,6 +16,9 @@ import {
   Coins,
   DollarSign,
   Home,
+  List,
+  ListChecks,
+  ListOrdered,
   LogOut,
   Settings,
   User,
@@ -103,6 +106,13 @@ const Navbar = ({ children }: { children: React.ReactNode }) => {
                 >
                   <Coins className="h-4 w-4"/>
                   Portfolio
+                </Link>
+                <Link
+                  to="/orders"
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
+                >
+                  <List/>
+                  Orders
                 </Link>
               </div>
             </div>

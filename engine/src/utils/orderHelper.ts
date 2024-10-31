@@ -1,40 +1,9 @@
 import { GlobalData } from "../db/index";
-import { InrBalance } from "../types/balances";
+
 import { v4 as uuidv4 } from 'uuid';
 import { OrderListItem } from "../types/orderList";
+import { createOrderItem, trackTrade, updateOrderStatus } from "./orderTrackingHelper";
 
-// Helper function to create new order entry
-const createOrderListItem = (
-  stockSymbol: string,
-  stockType: "yes" | "no",
-  userId: string,
-  quantity: number,
-  price: number,
-  orderType: "buy" | "sell",
-  tradedQuantity: number
-): OrderListItem => {
-  return {
-    id: uuidv4(),
-    stockSymbol,
-    stockType,
-    createdAt: new Date().toISOString(),
-    userId,
-    quantity,
-    price,
-    orderType,
-    totalPrice: quantity * price,
-    status: tradedQuantity === 0 ? "pending" : tradedQuantity === quantity ? "completed" : "partial",
-    tradedQuantity
-  };
-};
-
-// Helper function to update order status
-const updateOrderStatus = (order: OrderListItem, newTradedQuantity: number) => {
-  order.tradedQuantity = newTradedQuantity;
-  order.status = order.tradedQuantity === 0 ? "pending" : 
-                 order.tradedQuantity === order.quantity ? "completed" : 
-                 "partial";
-};
 
 export const validateOrder = (
   userId: string,
@@ -99,11 +68,12 @@ export const mintOppositeStock = (
   }
 };
 
-export const buyYesOption = (
+export const buy = (
   userId: string,
   stockSymbol: string,
   quantity: number,
-  price: number
+  price: number,
+  stockType:"yes"|"no"
 ) => {
   if (!validateOrder(userId, quantity, price)) {
     return { error: "Invalid order" };
@@ -115,133 +85,150 @@ export const buyYesOption = (
   GlobalData.inrBalances[userId].balance -= quantity * price * 100;
   GlobalData.inrBalances[userId].locked += quantity * price * 100;
 
-
+  const reverseStockType = stockType =="yes"?"no":"yes"
   let availableQuantity = 0;
-  let availableNoQuantity = 0;
-  if (GlobalData.orderBook[stockSymbol].yes[price]) {
-    availableQuantity = GlobalData.orderBook[stockSymbol].yes[price].total;
-    availableNoQuantity = GlobalData.orderBook[stockSymbol].no[10 - price]?.total || 0;
+  let availableReverseQuantity = 0;
+  if (GlobalData.orderBook[stockSymbol][stockType][price]) {
+    availableQuantity = GlobalData.orderBook[stockSymbol][stockType][price].total;
+    availableReverseQuantity = GlobalData.orderBook[stockSymbol][reverseStockType][10 - price]?.total || 0;
   }
 
   let tempQuantity = quantity;
   let tradedQuantity = 0;
 
-  // Create order list item
-  const orderItem = createOrderListItem(
+
+  const orderItem = createOrderItem(
     stockSymbol,
-    "yes",
+    stockType,
     userId,
     quantity,
     price,
-    "buy",
-    0
+    "buy"
   );
+  
   GlobalData.ordersList.push(orderItem);
 
   if (availableQuantity > 0) {
-    for (let user in GlobalData.orderBook[stockSymbol].yes[price].orders) {
+    for (let user in GlobalData.orderBook[stockSymbol][stockType][price].orders) {
       if (tempQuantity <= 0) break;
 
-      const available =
-        GlobalData.orderBook[stockSymbol].yes[price].orders[user].quantity;
+      const available = GlobalData.orderBook[stockSymbol][stockType][price].orders[user].quantity;
       const toTake = Math.min(available, tempQuantity);
 
-      GlobalData.orderBook[stockSymbol].yes[price].orders[user].quantity -= toTake;
-      GlobalData.orderBook[stockSymbol].yes[price].total -= toTake;
+      GlobalData.orderBook[stockSymbol][stockType][price].orders[user].quantity -= toTake;
+      GlobalData.orderBook[stockSymbol][stockType][price].total -= toTake;
       tempQuantity -= toTake;
       tradedQuantity += toTake;
 
-      // Update order status
-      updateOrderStatus(orderItem, tradedQuantity);
 
-      if (
-        GlobalData.orderBook[stockSymbol].yes[price].orders[user].type == "sell"
-      ) {
-        if (GlobalData.stockBalances[user][stockSymbol].yes) {
-          GlobalData.stockBalances[user][stockSymbol].yes.locked -= toTake;
+      updateOrderStatus(orderItem.id, tradedQuantity);
+
+      if (GlobalData.orderBook[stockSymbol][stockType][price].orders[user].type == "sell" ) {
+        const matchingSellOrder = GlobalData.ordersList.find(
+          order => order.userId === user && 
+                  order.stockType === stockType && 
+                  order.price === price &&
+                  order.orderType === "sell" &&
+                  order.status !== "completed"
+        );
+        if (matchingSellOrder) {
+          trackTrade(orderItem.id, matchingSellOrder.id, toTake);
+        }
+        if (GlobalData.stockBalances[user][stockSymbol][stockType]) {
+          GlobalData.stockBalances[user][stockSymbol][stockType].locked -= toTake;
           GlobalData.inrBalances[user].balance += toTake * price;
         }
       } else if (
-        GlobalData.orderBook[stockSymbol].yes[price].orders[user].type ==
-        "reversed"
+        GlobalData.orderBook[stockSymbol][stockType][price].orders[user].type == "reversed"
       ) {
-        if (GlobalData.stockBalances[user][stockSymbol].no) {
-          GlobalData.stockBalances[user][stockSymbol].no.quantity += toTake;
+        if (GlobalData.stockBalances[user][stockSymbol][reverseStockType]) {
+          GlobalData.stockBalances[user][stockSymbol][reverseStockType].quantity += toTake;
           GlobalData.inrBalances[user].locked -= toTake * price;
         }
       }
 
       if (
-        GlobalData.orderBook[stockSymbol].yes[price].orders[user].quantity === 0
+        GlobalData.orderBook[stockSymbol][stockType][price].orders[user].quantity === 0
       ) {
-        delete GlobalData.orderBook[stockSymbol].yes[price].orders[user];
+        delete GlobalData.orderBook[stockSymbol][stockType][price].orders[user];
       }
     }
 
-    if (GlobalData.orderBook[stockSymbol].yes[price].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].yes[price];
+    if (GlobalData.orderBook[stockSymbol][stockType][price].total === 0) {
+      delete GlobalData.orderBook[stockSymbol][stockType][price];
     }
   }
 
   if (
-    availableNoQuantity > 0 &&
-    GlobalData.orderBook[stockSymbol].no[10 - price]
+    availableReverseQuantity > 0 &&
+    GlobalData.orderBook[stockSymbol][reverseStockType][10 - price]
   ) {
-    for (let user in GlobalData.orderBook[stockSymbol].no[10 - price].orders) {
+    for (let user in GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders) {
       if (tempQuantity <= 0) break;
 
       const available =
-        GlobalData.orderBook[stockSymbol].no[10 - price].orders[user].quantity;
+        GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user].quantity;
       const toTake = Math.min(available, tempQuantity);
 
-      GlobalData.orderBook[stockSymbol].no[10 - price].orders[user].quantity -=
+      GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user].quantity -=
         toTake;
-      GlobalData.orderBook[stockSymbol].no[10 - price].total -= toTake;
+      GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].total -= toTake;
       tempQuantity -= toTake;
       tradedQuantity += toTake;
 
       // Update order status
-      updateOrderStatus(orderItem, tradedQuantity);
+      updateOrderStatus(orderItem.id, tradedQuantity);
 
       if (
-        GlobalData.orderBook[stockSymbol].no[10 - price].orders[user].type ==
+        GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user].type ==
         "sell"
       ) {
-        if (GlobalData.stockBalances[user][stockSymbol].no) {
-          GlobalData.stockBalances[user][stockSymbol].no.locked -= toTake;
+
+        const matchingSellOrder = GlobalData.ordersList.find(
+          order => order.userId === user && 
+                  order.stockType === stockType && 
+                  order.price === 10 - price &&
+                  order.orderType === "sell" &&
+                  order.status !== "completed"
+        );
+        if (matchingSellOrder) {
+          trackTrade(orderItem.id, matchingSellOrder.id, toTake);
+        }
+        if (GlobalData.stockBalances[user][stockSymbol][reverseStockType]) {
+          GlobalData.stockBalances[user][stockSymbol][reverseStockType].locked -= toTake;
           GlobalData.inrBalances[user].balance += toTake * (10 - price);
         }
       } else if (
-        GlobalData.orderBook[stockSymbol].no[10 - price].orders[user].type ==
+        GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user].type ==
         "reversed"
       ) {
-        if (GlobalData.stockBalances[user][stockSymbol].yes) {
-          GlobalData.stockBalances[user][stockSymbol].yes.quantity += toTake;
+        if (GlobalData.stockBalances[user][stockSymbol][stockType]) {
+          GlobalData.stockBalances[user][stockSymbol][stockType].quantity += toTake;
           GlobalData.inrBalances[user].locked -= toTake * (10 - price);
         }
       }
 
       if (
-        GlobalData.orderBook[stockSymbol].no[10 - price].orders[user]
+        GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user]
           .quantity === 0
       ) {
-        delete GlobalData.orderBook[stockSymbol].no[10 - price].orders[user];
+        delete GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].orders[user];
       }
     }
 
-    if (GlobalData.orderBook[stockSymbol].no[10 - price].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].no[10 - price];
+    if (GlobalData.orderBook[stockSymbol][reverseStockType][10 - price].total === 0) {
+      delete GlobalData.orderBook[stockSymbol][reverseStockType][10 - price];
     }
   }
 
   if (tempQuantity > 0) {
-    mintOppositeStock(stockSymbol, price, tempQuantity, userId, "yes");
+    mintOppositeStock(stockSymbol, price, tempQuantity, userId, stockType);
   }
 
   initializeStockBalance(userId, stockSymbol);
 
-  if (GlobalData.stockBalances[userId][stockSymbol]?.yes) {
-    GlobalData.stockBalances[userId][stockSymbol].yes.quantity +=
+  if (GlobalData.stockBalances[userId][stockSymbol][stockType]) {
+    GlobalData.stockBalances[userId][stockSymbol][stockType].quantity +=
       quantity - tempQuantity;
   }
 
@@ -255,206 +242,12 @@ export const buyYesOption = (
   };
 };
 
-
-export const buyNoOption = (
+export const sell = (
   userId: string,
   stockSymbol: string,
   quantity: number,
-  price: number
-) => {
-  if (!validateOrder(userId, quantity, price)) {
-    return { error: "Invalid order" };
-  }
-
-  GlobalData.inrBalances[userId].balance -= quantity * price * 100;
-  GlobalData.inrBalances[userId].locked += quantity * price * 100;
-
-  if (!GlobalData.orderBook[stockSymbol]) {
-    return { msg: "Invalid stock symbol" };
-  }
-
-  let availableQuantity = 0;
-  let availableYesQuantity = 0;
-  if (GlobalData.orderBook[stockSymbol].no[price]) {
-    availableQuantity = GlobalData.orderBook[stockSymbol].no[price].total;
-    availableYesQuantity =
-      GlobalData.orderBook[stockSymbol].yes[10 - price]?.total || 0;
-  }
-
-  let tempQuantity = quantity;
-
-  if (availableQuantity > 0) {
-    for (let user in GlobalData.orderBook[stockSymbol].no[price].orders) {
-      if (!GlobalData.stockBalances[userId]) {
-        GlobalData.stockBalances[userId] = {};
-      }
-
-      if (!GlobalData.stockBalances[user]) {
-        GlobalData.stockBalances[user] = {};
-      }
-
-      if (!GlobalData.stockBalances[userId][stockSymbol]) {
-        GlobalData.stockBalances[userId][stockSymbol] = {
-          yes: { quantity: 0, locked: 0 },
-          no: { quantity: 0, locked: 0 },
-        };
-      }
-
-      if (!GlobalData.stockBalances[user][stockSymbol]) {
-        GlobalData.stockBalances[user][stockSymbol] = {
-          yes: { quantity: 0, locked: 0 },
-          no: { quantity: 0, locked: 0 },
-        };
-      }
-
-      if (tempQuantity <= 0) break;
-
-      const available =
-        GlobalData.orderBook[stockSymbol].no[price].orders[user].quantity;
-      const toTake = Math.min(available, tempQuantity);
-
-      GlobalData.orderBook[stockSymbol].no[price].orders[user].quantity -=
-        toTake;
-      GlobalData.orderBook[stockSymbol].no[price].total -= toTake;
-      tempQuantity -= toTake;
-
-      if (
-        GlobalData.orderBook[stockSymbol].no[price].orders[user].type == "sell"
-      ) {
-        if (GlobalData.stockBalances[user][stockSymbol].no) {
-          GlobalData.stockBalances[user][stockSymbol].no.locked -= toTake;
-          GlobalData.inrBalances[user].balance += toTake * 100 * price;
-        }
-      } else if (
-        GlobalData.orderBook[stockSymbol].no[price].orders[user].type ==
-        "reversed"
-      ) {
-        if (GlobalData.stockBalances[userId][stockSymbol].yes) {
-          console.log(
-            "stock balance of yes actual before ",
-            GlobalData.stockBalances[userId][stockSymbol].yes.quantity
-          );
-        }
-        if (GlobalData.stockBalances[user][stockSymbol].yes) {
-          GlobalData.stockBalances[user][stockSymbol].yes.quantity += toTake;
-          GlobalData.inrBalances[user].locked -= toTake * 100 * price;
-          console.log(
-            "stock balance of yes ",
-            GlobalData.stockBalances[user][stockSymbol].yes.quantity
-          );
-        }
-        if (GlobalData.stockBalances[userId][stockSymbol].yes) {
-          console.log(
-            "stock balance of yes actual ",
-            GlobalData.stockBalances[userId][stockSymbol].yes.quantity
-          );
-        }
-      }
-
-      if (
-        GlobalData.orderBook[stockSymbol].no[price].orders[user].quantity === 0
-      ) {
-        delete GlobalData.orderBook[stockSymbol].no[price].orders[user];
-      }
-    }
-
-    if (GlobalData.orderBook[stockSymbol].no[price].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].no[price];
-    }
-  }
-
-  if (
-    availableYesQuantity > 0 &&
-    GlobalData.orderBook[stockSymbol].yes[10 - price]
-  ) {
-    for (let user in GlobalData.orderBook[stockSymbol].yes[10 - price].orders) {
-      if (!GlobalData.stockBalances[userId]) {
-        GlobalData.stockBalances[userId] = {};
-      }
-
-      if (!GlobalData.stockBalances[user]) {
-        GlobalData.stockBalances[user] = {};
-      }
-
-      if (!GlobalData.stockBalances[userId][stockSymbol]) {
-        GlobalData.stockBalances[userId][stockSymbol] = {
-          yes: { quantity: 0, locked: 0 },
-          no: { quantity: 0, locked: 0 },
-        };
-      }
-
-      if (!GlobalData.stockBalances[user][stockSymbol]) {
-        GlobalData.stockBalances[user][stockSymbol] = {
-          yes: { quantity: 0, locked: 0 },
-          no: { quantity: 0, locked: 0 },
-        };
-      }
-      if (tempQuantity <= 0) break;
-
-      const available =
-        GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user].quantity;
-      const toTake = Math.min(available, tempQuantity);
-
-      GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user].quantity -=
-        toTake;
-      GlobalData.orderBook[stockSymbol].yes[10 - price].total -= toTake;
-      tempQuantity -= toTake;
-
-      if (
-        GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user].type ==
-        "sell"
-      ) {
-        if (GlobalData.stockBalances[user][stockSymbol].yes) {
-          GlobalData.stockBalances[user][stockSymbol].yes.locked -= toTake;
-          GlobalData.inrBalances[user].balance += toTake * 100 * (10 - price);
-        }
-      } else if (
-        GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user].type ==
-        "reversed"
-      ) {
-        if (GlobalData.stockBalances[user][stockSymbol].no) {
-          GlobalData.stockBalances[user][stockSymbol].no.quantity += toTake;
-          GlobalData.inrBalances[user].locked -= toTake * 100 * (10 - price);
-        }
-      }
-
-      if (
-        GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user]
-          .quantity === 0
-      ) {
-        delete GlobalData.orderBook[stockSymbol].yes[10 - price].orders[user];
-      }
-    }
-
-    if (GlobalData.orderBook[stockSymbol].yes[10 - price].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].yes[10 - price];
-    }
-  }
-
-  if (tempQuantity > 0) {
-    mintOppositeStock(stockSymbol, price, tempQuantity, userId, "no");
-  }
-
-  initializeStockBalance(userId, stockSymbol);
-
-  if (GlobalData.stockBalances[userId][stockSymbol]?.no) {
-    GlobalData.stockBalances[userId][stockSymbol].no.quantity +=
-      quantity - tempQuantity;
-  }
-
-  GlobalData.inrBalances[userId].locked -=
-    (quantity - tempQuantity) * price * 100;
-
-  return {
-    message: `Buy order for 'no' added for ${stockSymbol}`,
-    orderbook: GlobalData.orderBook[stockSymbol],
-  };
-};
-export const sellYesOption = (
-  userId: string,
-  stockSymbol: string,
-  quantity: number,
-  price: number
+  price: number,
+  stockType:"yes"|"no"
 ) => {
   if (!GlobalData.orderBook[stockSymbol]) {
     return { msg: "Invalid stock symbol" };
@@ -466,31 +259,50 @@ export const sellYesOption = (
   ) {
     return { error: 'Insufficient "yes" stocks to sell' };
   }
+  const reverseStockType = stockType === "yes" ? "no" :"yes"
+  GlobalData.stockBalances[userId][stockSymbol][stockType].quantity -= quantity;
+  GlobalData.stockBalances[userId][stockSymbol][stockType].locked += quantity;
 
-  GlobalData.stockBalances[userId][stockSymbol].yes.quantity -= quantity;
-  GlobalData.stockBalances[userId][stockSymbol].yes.locked += quantity;
-
+  const orderItem = createOrderItem(
+    stockSymbol,
+    stockType,
+    userId,
+    quantity,
+    price,
+    "sell"
+  );
   let remainingQuantity = quantity;
   let opposingPrice = 10 - price;
-
-  for (let p in GlobalData.orderBook[stockSymbol].no) {
+  let tradedQuantity = 0
+  for (let p in GlobalData.orderBook[stockSymbol][reverseStockType]) {
     if (remainingQuantity <= 0) break;
     if (parseFloat(p) > opposingPrice) continue;
 
-    for (let user in GlobalData.orderBook[stockSymbol].no[p].orders) {
+    for (let user in GlobalData.orderBook[stockSymbol][reverseStockType][p].orders) {
       if (remainingQuantity <= 0) break;
 
       const availableQuantity =
-        GlobalData.orderBook[stockSymbol].no[p].orders[user].quantity;
+        GlobalData.orderBook[stockSymbol][reverseStockType][p].orders[user].quantity;
       const matchedQuantity = Math.min(availableQuantity, remainingQuantity);
-
-      GlobalData.orderBook[stockSymbol].no[p].orders[user].quantity -=
+      tradedQuantity += matchedQuantity;
+      updateOrderStatus(orderItem.id, tradedQuantity);
+      const matchingBuyOrder = GlobalData.ordersList.find(
+        order => order.userId === user &&
+                order.stockType === reverseStockType &&
+                order.price === parseFloat(p) &&
+                order.orderType === "buy" &&
+                order.status !== "completed"
+      );
+      if (matchingBuyOrder) {
+        trackTrade(matchingBuyOrder.id, orderItem.id, matchedQuantity);
+      }
+      GlobalData.orderBook[stockSymbol][reverseStockType][p].orders[user].quantity -=
         matchedQuantity;
-      GlobalData.orderBook[stockSymbol].no[p].total -= matchedQuantity;
+      GlobalData.orderBook[stockSymbol][reverseStockType][p].total -= matchedQuantity;
       remainingQuantity -= matchedQuantity;
 
-      if (GlobalData.stockBalances[user][stockSymbol].no) {
-        GlobalData.stockBalances[user][stockSymbol].no.locked -=
+      if (GlobalData.stockBalances[user][stockSymbol][reverseStockType]) {
+        GlobalData.stockBalances[user][stockSymbol][reverseStockType].locked -=
           matchedQuantity;
       }
 
@@ -498,30 +310,30 @@ export const sellYesOption = (
         matchedQuantity * parseFloat(p) * 100;
     }
 
-    if (GlobalData.orderBook[stockSymbol].no[p].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].no[p];
+    if (GlobalData.orderBook[stockSymbol][reverseStockType][p].total === 0) {
+      delete GlobalData.orderBook[stockSymbol][reverseStockType][p];
     }
   }
 
   GlobalData.inrBalances[userId].balance +=
     (quantity - remainingQuantity) * price * 100;
-  GlobalData.stockBalances[userId][stockSymbol].yes.locked -=
+  GlobalData.stockBalances[userId][stockSymbol][stockType].locked -=
     quantity - remainingQuantity;
 
   if (remainingQuantity > 0) {
-    if (!GlobalData.orderBook[stockSymbol].yes[price]) {
-      GlobalData.orderBook[stockSymbol].yes[price] = { total: 0, orders: {} };
+    if (!GlobalData.orderBook[stockSymbol][stockType][price]) {
+      GlobalData.orderBook[stockSymbol][stockType][price] = { total: 0, orders: {} };
     }
 
-    if (!GlobalData.orderBook[stockSymbol].yes[price].orders[userId]) {
-      GlobalData.orderBook[stockSymbol].yes[price].orders[userId] = {
+    if (!GlobalData.orderBook[stockSymbol][stockType][price].orders[userId]) {
+      GlobalData.orderBook[stockSymbol][stockType][price].orders[userId] = {
         quantity: 0,
         type: "sell",
       };
     }
 
-    GlobalData.orderBook[stockSymbol].yes[price].total += remainingQuantity;
-    GlobalData.orderBook[stockSymbol].yes[price].orders[userId].quantity +=
+    GlobalData.orderBook[stockSymbol][stockType][price].total += remainingQuantity;
+    GlobalData.orderBook[stockSymbol][stockType][price].orders[userId].quantity +=
       remainingQuantity;
   }
 
@@ -531,83 +343,19 @@ export const sellYesOption = (
   };
 };
 
-export const sellNoOption = (
-  userId: string,
-  stockSymbol: string,
-  quantity: number,
-  price: number
-) => {
-  if (!GlobalData.orderBook[stockSymbol]) {
-    return { msg: "Invalid stock symbol" };
-  }
 
-  if (
-    !GlobalData.stockBalances[userId]?.[stockSymbol]?.no ||
-    GlobalData.stockBalances[userId][stockSymbol].no.quantity < quantity
-  ) {
-    return { error: 'Insufficient "no" stocks to sell' };
-  }
-
-  GlobalData.stockBalances[userId][stockSymbol].no.quantity -= quantity;
-  GlobalData.stockBalances[userId][stockSymbol].no.locked += quantity;
-
-  let remainingQuantity = quantity;
-  let opposingPrice = 10 - price;
-
-  for (let p in GlobalData.orderBook[stockSymbol].yes) {
-    if (remainingQuantity <= 0) break;
-    if (parseFloat(p) > opposingPrice) continue;
-
-    for (let user in GlobalData.orderBook[stockSymbol].yes[p].orders) {
-      if (remainingQuantity <= 0) break;
-
-      const availableQuantity =
-        GlobalData.orderBook[stockSymbol].yes[p].orders[user].quantity;
-      const matchedQuantity = Math.min(availableQuantity, remainingQuantity);
-
-      GlobalData.orderBook[stockSymbol].yes[p].orders[user].quantity -=
-        matchedQuantity;
-      GlobalData.orderBook[stockSymbol].yes[p].total -= matchedQuantity;
-      remainingQuantity -= matchedQuantity;
-
-      if (GlobalData.stockBalances[user][stockSymbol].yes) {
-        GlobalData.stockBalances[user][stockSymbol].yes.locked -=
-          matchedQuantity;
-      }
-
-      GlobalData.inrBalances[user].balance +=
-        matchedQuantity * parseFloat(p) * 100;
-    }
-
-    if (GlobalData.orderBook[stockSymbol].yes[p].total === 0) {
-      delete GlobalData.orderBook[stockSymbol].yes[p];
-    }
-  }
-
-  GlobalData.inrBalances[userId].balance +=
-    (quantity - remainingQuantity) * price * 100;
-  GlobalData.stockBalances[userId][stockSymbol].no.locked -=
-    quantity - remainingQuantity;
-
-  if (remainingQuantity > 0) {
-    if (!GlobalData.orderBook[stockSymbol].no[price]) {
-      GlobalData.orderBook[stockSymbol].no[price] = { total: 0, orders: {} };
-    }
-
-    if (!GlobalData.orderBook[stockSymbol].no[price].orders[userId]) {
-      GlobalData.orderBook[stockSymbol].no[price].orders[userId] = {
-        quantity: 0,
-        type: "sell",
-      };
-    }
-
-    GlobalData.orderBook[stockSymbol].no[price].total += remainingQuantity;
-    GlobalData.orderBook[stockSymbol].no[price].orders[userId].quantity +=
-      remainingQuantity;
-  }
-
-  return {
-    message: `Sell order for 'no' stock placed for ${stockSymbol}`,
-    orderbook: GlobalData.orderBook[stockSymbol],
-  };
-};
+export const  getProbabilityOfYes = (stockSymbol: string):number => {
+  const recentTrades = GlobalData.ordersList
+    .filter(order => order.stockSymbol === stockSymbol)
+    .slice(-10);  
+    
+  if (recentTrades.length === 0) return 0.5; 
+    
+  const weightedSum = recentTrades.reduce((sum, trade) => {
+    const price = trade.stockType === 'yes' ? trade.price : (10 - trade.price);
+    return sum + (price * trade.quantity);
+  }, 0);
+    
+  const totalQuantity = recentTrades.reduce((sum, trade) => sum + trade.quantity, 0);
+  return weightedSum / totalQuantity / 10; 
+}

@@ -1,7 +1,7 @@
 
 
 import { GlobalData} from "../db";
-import { buyNoOption,buyYesOption,sellNoOption,sellYesOption } from "../utils/orderHelper";
+import { buy,getProbabilityOfYes,sell} from "../utils/orderHelper";
 import { message, publishMessage } from "../services/redis";
 import { produceMessage } from "../services/kafka";
 interface OrderData {
@@ -26,11 +26,11 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
         if(GlobalData.orderBook[stockSymbol][stockType][i]){
           const totalAvailable = GlobalData.orderBook[stockSymbol][stockType][i].total
           const min = Math.min(totalAvailable,availableQuantity)
-          stockType==="yes" ? buyYesOption(userId,stockSymbol,min,i) : buyNoOption(userId,stockSymbol,min,i)
+          stockType==="yes" ? buy(userId,stockSymbol,min,i,"yes") : buy(userId,stockSymbol,min,i,"no")
           availableQuantity-=min
         }
       }
-    const response  = stockType ==="yes" ? buyYesOption(userId,stockSymbol,availableQuantity,price) : buyNoOption(userId,stockSymbol,availableQuantity,price);
+    const response  = stockType ==="yes" ? buy(userId,stockSymbol,availableQuantity,price,"yes") : buy(userId,stockSymbol,availableQuantity,price,"no");
     if(!response) return publishMessage(message(400, "Invalid paramas", null), eventId);
     if(response.error)
       return publishMessage(message(400, response.error, null), eventId);
@@ -45,7 +45,10 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
 export const handleSell = async (data:OrderData,eventId:string)=>{
   const { userId, stockSymbol, quantity, price:sellerPrice, stockType } = data;
   const price = sellerPrice/100;
-  const response = stockType == "no"?sellNoOption(userId, stockSymbol, quantity, price):sellYesOption(userId, stockSymbol, quantity, price)
+  if(!GlobalData.orderBook[stockSymbol]){
+    return publishMessage(message(400, "Invalid paramas", null), eventId);
+  }
+  const response = stockType == "no"?sell(userId, stockSymbol, quantity, price,"no"):sell(userId, stockSymbol, quantity, price,"yes")
   if(!response) return publishMessage(message(400, "Invalid paramas", null), eventId);
   if(response.error) return publishMessage(message(400, response.error, null), eventId);
   const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
@@ -105,11 +108,24 @@ export const exit = async (data:{stockSymbol:string,userId:string,price:number,s
   if(stockBalances[stockType].quantity<quantity)
     return publishMessage(message(400, "Insuffient stocks", null), eventId);
   const sellerPrice = price/100;
-   const response = stockType === "yes" ?  sellYesOption(userId, stockSymbol, quantity, sellerPrice):sellNoOption(userId,stockSymbol,quantity,sellerPrice)
+   const response = stockType === "yes" ?  sell(userId, stockSymbol, quantity, sellerPrice,"yes"):sell(userId,stockSymbol,quantity,sellerPrice,"no")
   if(response.error)
     return publishMessage(message(400, response.error, null), eventId);
-  delete GlobalData.stockBalances[userId][stockSymbol]
+  if(GlobalData.stockBalances[userId] )
+  {
+    const yes =  GlobalData.stockBalances[userId][stockSymbol].yes 
+    const no =  GlobalData.stockBalances[userId][stockSymbol].no 
+    if(yes?.locked===0 && yes?.quantity===0 && no?.locked===0 && no?.quantity===0){
+       delete GlobalData.stockBalances[userId][stockSymbol]
+    }
+
+  }
   const parsedOrderBook = JSON.stringify( GlobalData.orderBook[stockSymbol])
   publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
   publishMessage(message(200, `Sold`, null),eventId);
+}
+export const getPrice = async (stockSymbol:string,eventId:string)=>{
+  const yes = getProbabilityOfYes(stockSymbol) * 10;
+  const no = 10 - yes
+  publishMessage(message(200,"",{yes:Number(yes).toFixed(0),no:Number(no).toFixed(0)}),eventId)
 }

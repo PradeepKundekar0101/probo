@@ -34,7 +34,8 @@ orderRouter.post("/cancel", isAuthenticated,(req,res)=>{
 });
 orderRouter.post("/exit/:stockSymbol",isAuthenticated,(req:AuthRequest,res)=>{
     try {
-        pushToQueue("EXIT",{stockSymbol:req.params.stockSymbol,userId:req.userId},res)
+        const {quantity,price,stockType} =req.body
+        pushToQueue("EXIT",{stockSymbol:req.params.stockSymbol,userId:req.userId,quantity,price,stockType},res)
     } catch (error:any) {
         res.status(500).send(error?.message)
     }

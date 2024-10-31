@@ -82,7 +82,7 @@ const MarketTable = ({ marketData, status }: { marketData: Market[]; status: "ac
                 )}
                 {market.title}
               </TableCell>
-              <TableCell>{market.description}</TableCell>
+              <TableCell>{market.description.split(".")[0].slice(0,Math.min(market.description.split(".")[0].length,30))+"..." || market.description.slice(0,10)+"...."}</TableCell>
               <TableCell>
                 {format(new Date(market.startTime), "MMM d, yyyy HH:mm")}
               </TableCell>
