@@ -23,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 100000,
+  interval: 1000000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });

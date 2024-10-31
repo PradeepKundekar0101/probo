@@ -71,15 +71,15 @@ const Home = () => {
             {categoryData &&
               categoryData.data?.map((e: Category) => (
                 <Card
-                  className="flex items-center py-2 px-4"
+                  className="flex items-center py-2 px-4 shadow-sm"
                   key={e.categoryName}
                 >
                   <img
-                    className="h-10 w-10 object-cover"
+                    className="h-10 w-10 object-cover rounded-lg"
                     src={e.icon}
                     alt={`${e.categoryName} icon`}
                   />
-                  <h1 className="text-center text-black">{e.categoryName}</h1>
+                  <h1 className="text-center text-sm ml-1 text-black">{e.categoryName}</h1>
                 </Card>
               ))}
           </div>
