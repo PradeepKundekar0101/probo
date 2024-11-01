@@ -22,5 +22,5 @@ export interface Market {
     sourceOfTruth?:string 
     numberOfTraders:number
     thumbnail?:string
-
+    categoryId:string
   }

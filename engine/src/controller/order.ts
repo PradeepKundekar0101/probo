@@ -14,7 +14,7 @@ interface OrderData {
 interface OrderCancelData { 
   orderId:string
 }
-const {orderBook,ordersList,inrBalances,stockBalances} = GlobalData
+const {orderBook,ordersList,inrBalances} = GlobalData
 export const handleBuy = async (data:OrderData,eventId:string)=>{
     const { userId, stockSymbol, quantity, price:buyerPrice, stockType } = data;
     const price = buyerPrice/100;
@@ -23,7 +23,7 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
     }
     let availableQuantity = quantity
       for( let i=1;i<price;i++){
-        if(orderBook[stockSymbol][stockType][i]){
+        if(availableQuantity>0 && orderBook[stockSymbol][stockType][i]){
           const totalAvailable = orderBook[stockSymbol][stockType][i].total
           const min = Math.min(totalAvailable,availableQuantity)
           stockType==="yes" ? buy(userId,stockSymbol,min,i,"yes") : buy(userId,stockSymbol,min,i,"no")
@@ -37,7 +37,7 @@ export const handleBuy = async (data:OrderData,eventId:string)=>{
     const parsedOrderBook = JSON.stringify( orderBook[stockSymbol])
     if(!GlobalData.traders[stockSymbol]) GlobalData.traders[stockSymbol]= new Set()
     GlobalData.traders[stockSymbol].add(userId)
-    // produceMessage(JSON.stringify({message:{operation:"UPDATE_TRADER_COUNT",data:{id:stockSymbol,count:GlobalData.traders[stockSymbol].size}}}))
+    produceMessage(JSON.stringify({message:{operation:"UPDATE_TRADER_COUNT",data:{id:stockSymbol,count:GlobalData.traders[stockSymbol].size}}}))
     publishMessage(message(200,"",{stockSymbol,orderBook:parsedOrderBook}),"MESSAGE")    
     publishMessage(message(200, `Buy successful`, null),eventId);
 }
@@ -82,21 +82,23 @@ export const cancelOrder = async (data:OrderCancelData,eventId:string)=>{
 
 export const getOrders = async (data: string, eventId: string) => {
   try {
-    const orders = GlobalData.ordersList.filter((order) => order.userId === data)
+    const orders = GlobalData.ordersList
+      .filter((order) => order.userId === data)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const uniqueOrders = Array.from(new Map(orders.map((order) => [order.id, order])).values());
     publishMessage(
-      message(200, "Orders retrieved successfully", { orders }), 
+      message(200, "Orders retrieved successfully", { orders: uniqueOrders }),
       eventId
     );
   } catch (error) {
     console.error("Error retrieving orders:", error);
     publishMessage(
-      
-      message(500, "Error",null), 
+      message(500, "Error", null), 
       eventId
     );
   }
 };
+
 
 export const exit = async (data:{stockSymbol:string,userId:string,price:number,stockType:"yes"|"no",quantity:number},eventId:string)=>{
   const { userId, stockSymbol,price,stockType,quantity } = data;

@@ -1,11 +1,11 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
 import { processMessages } from "./app";
-// import { settleMarketsOnClose } from "./controller/settleMarket";
 import express from "express";
-import { createProducer } from "./services/kafka";
+import { createProducer, produceMessage } from "./services/kafka";
 import { SnapShotManager } from "./services/snapshot";
 import { GlobalData } from "./db";
+import moment from "moment";
 export const app = express();
 dotenv.config();
 const REDIS_URL = process.env.REDIS_URL
@@ -23,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 1000000,
+  interval: 10000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });
@@ -78,3 +78,4 @@ startServer().catch(error => {
   console.error("Failed to start server:", error);
   process.exit(1);
 });
+

@@ -229,8 +229,8 @@ const Portfolio = () => {
                     </div>
                     <div className=" mt-2">
                       <h1 className=" text-sm font-medium">
-                        { moment(markets[markets.findIndex((e)=>e.id===stockName)]).isBefore(new Date())?"Expired":"Expires" } 
-                        <span className={` ${moment(markets[markets.findIndex((e)=>e.id===stockName)]).isBefore(new Date())?"text-yellow-500":"text-blue-700"}  ml-1 rounded-md p-1`}>
+                        { moment(markets[markets.findIndex((e)=>e.id===stockName)].endTime).unix()< moment().unix()?"Expired":"Expires" } 
+                        <span className={` ${moment(markets[markets.findIndex((e)=>e.id===stockName)].endTime).unix()<moment().unix()?"text-yellow-500":"text-blue-700"}  ml-1 rounded-md p-1`}>
                           {moment(
                             markets[
                               markets.findIndex((e: any) => e.id === stockName)
@@ -240,7 +240,7 @@ const Portfolio = () => {
                       </h1>
                     </div>
                     <Dialog open={selectedMarket!=null} >
-                     { moment(markets[markets.findIndex((e)=>e.id===stockName)]).isBefore(new Date())?<h1 className="text-yellow-500">
+                     { moment(markets[markets.findIndex((e)=>e.id===stockName)].endTime).unix()< moment().unix()?<h1 className="text-yellow-500">
                       Market settlement pending
                      </h1>: <DialogTrigger 
                       //@ts-ignore
@@ -418,6 +418,9 @@ const Portfolio = () => {
                           >
                             {mutate.isPending ? "Loading..." : "Confirm"}
                           </Button>
+                          <Button onClick={()=>{
+                            //@ts-ignore
+                            ref.current?.click()}} className="w-full mt-1" variant={"outline"}>Close</Button>
                         </DialogDescription>
                       </DialogContent>
                     </Dialog>

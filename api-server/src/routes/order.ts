@@ -2,6 +2,7 @@ import express from "express";
 
 import { pushToQueue } from "../services/redis";
 import { AuthRequest, isAuthenticated } from "../middleware/auth";
+import { prismaClient } from "../services/prisma";
 export const orderRouter = express.Router();
 
 orderRouter.post("/buy", isAuthenticated, (req:AuthRequest,res)=>{
@@ -21,6 +22,19 @@ orderRouter.post("/sell", isAuthenticated, (req:AuthRequest,res)=>{
 orderRouter.get("/getOrders",isAuthenticated,(req:AuthRequest,res)=>{
     try {
         pushToQueue("GET_ORDERS",req.userId,res)
+    } catch (error:any) {
+        res.status(500).send(error?.message)
+    }
+})
+orderRouter.get("/getSettledOrders",isAuthenticated,async(req:AuthRequest,res)=>{
+    try {
+        const orders = await prismaClient.order.findMany({
+            where:{
+                userId:req.userId
+            }
+        })
+        console.log("first")
+        res.status(200).send(orders)
     } catch (error:any) {
         res.status(500).send(error?.message)
     }

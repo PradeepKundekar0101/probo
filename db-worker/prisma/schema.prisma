@@ -16,7 +16,6 @@ model User {
     avatarUrl     String?
     inrBalances   InrBalance[]
     stockBalances StockBalance[]
-    orderList     Order[]
 }
 
 model InrBalance {
@@ -52,35 +51,29 @@ model Market {
     categoryId      String
     sourceOfTruth   String         @default("")
     StockBalance    StockBalance[]
-    Order           Order[]
     numberOfTraders Int            @default(0)
 
     @@map("markets")
 }
 
 model Order {
-    id         String      @id @default(uuid())
-    market     Market      @relation(fields: [marketId], references: [id])
-    marketId   String
-    user       User        @relation(fields: [userId], references: [id])
-    userId     String
-    stockType  StockType
-    createdAt  DateTime    @default(now())
-    quantity   Int
-    price      Float
-    orderType  String
-    totalPrice Float
-    status     OrderStatus
+    id             String   @id @default(uuid())
+    stockSymbol    String
+    stockType      String
+    createdAt      DateTime @default(now())
+    userId         String
+    quantity       Int
+    price          Float
+    orderType      String
+    totalPrice     Float
+    status         String
+    tradedQuantity Int
+    marketId       String
 }
 
 enum StockType {
     yes
     no
-}
-
-enum OrderStatus {
-    executed
-    pending
 }
 
 model Category {
