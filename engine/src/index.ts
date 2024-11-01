@@ -35,9 +35,8 @@ const recoverDataFromSnapshot = async (): Promise<void> => {
       Object.assign(GlobalData.inrBalances, recoveredData.data.inrBalances || {});
       Object.assign(GlobalData.stockBalances, recoveredData.data.stockBalances || {});
       Object.assign(GlobalData.orderBook, recoveredData.data.orderBook || {});
-      Object.assign(GlobalData.markets, recoveredData.data.markets || {});
-      GlobalData.ordersList.length = 0; 
-      GlobalData.ordersList.push(...(recoveredData.data.ordersList || []));
+      Object.assign(GlobalData.markets, recoveredData.data.markets || {}); 
+      GlobalData.ordersList = recoveredData.data.ordersList || [];
     }
   } catch (error) {
     console.error('Failed to recover data from snapshot:', error);
@@ -47,17 +46,12 @@ const recoverDataFromSnapshot = async (): Promise<void> => {
 
 const startServer = async () => {
   try {
-
     await recoverDataFromSnapshot();
 
     pollQueue();
     createProducer();
     snapshotManager.startSnapShotting();
-    
-
-    // setTimeout(() => {
-    //   settleMarketsOnClose();
-    // }, 5000);
+  
 
     app.listen(8001, () => {
       console.log("API server Listening at 8001");

@@ -3,7 +3,7 @@ import useAxios from "@/hooks/use-axios";
 import Navbar from "@/layout/Navbar";
 import { Category, Market } from "@/types/data";
 import { useQuery } from "@tanstack/react-query";
-import {  CheckCircle2, Users } from "lucide-react";
+import { CheckCircle2, Users } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -11,9 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-
 } from "@/components/ui/dialog";
-
 import MarketDrawer from "./drawer-market";
 import MarketDetailsDrawer from "./drawer-details";
 import { useState } from "react";
@@ -21,7 +19,7 @@ import { Button } from "@/components/ui/button";
 
 const Home = () => {
   const api = useAxios();
-  const [modalOpen,setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { data: categoryData } = useQuery({
     queryKey: ["category"],
@@ -29,6 +27,7 @@ const Home = () => {
       return (await api.get("/market/getCategories")).data;
     },
   });
+
   const { data: marketData } = useQuery({
     queryKey: ["market"],
     queryFn: async () => {
@@ -42,15 +41,44 @@ const Home = () => {
       return api.get("/balance/inr");
     },
   });
-  console.log(marketData);
+
+
+  const { data: marketPrices } = useQuery({
+    queryKey: ["market-prices"],
+    queryFn: async () => {
+      if (!marketData?.data) return {};
+      
+      const prices: Record<string, number> = {};
+      
+      await Promise.all(
+        marketData.data.map(async (market: Market) => {
+          try {
+            const response = await api.get(`/market/price/${market.id}`);
+            const price = response?.data?.data?.yes;
+            prices[market.id] = typeof price === 'string' && !isNaN(Number(price)) ? Number(price) : -1;
+          } catch (error) {
+            console.error(`Error fetching price for market ${market.id}:`, error);
+            prices[market.id] = 0;
+          }
+        })
+      );
+      
+      return prices;
+    },
+    enabled: !!marketData?.data,
+    refetchInterval: 30000, 
+  });
+
+  const getPrice = (marketId: string): number => {
+    return marketPrices?.[marketId] ?? 0;
+  };
 
   return (
     <Navbar>
-      <Dialog  open={modalOpen}>
+      <Dialog open={modalOpen}>
         <DialogContent>
-          <DialogHeader >
-            <DialogTitle className=" text-center">Success</DialogTitle>
-           
+          <DialogHeader>
+            <DialogTitle className="text-center">Success</DialogTitle>
             <DialogDescription className="text-center">
               <div className="flex justify-center">
                 <CheckCircle2 color="green" />
@@ -59,42 +87,44 @@ const Home = () => {
               account and remove your data from our servers.
             </DialogDescription>
             <DialogClose asChild>
-              <Button onClick={()=>{setModalOpen(false)}} variant={"outline"}>Close </Button>
+              <Button onClick={() => setModalOpen(false)} variant="outline">
+                Close
+              </Button>
             </DialogClose>
           </DialogHeader>
         </DialogContent>
       </Dialog>
+      
       <section>
         <section className="my-2">
-          {/* <h1 className="text-xl mb-2">Top Categories</h1> */}
           <div className="flex space-x-3">
-            {categoryData &&
-              categoryData.data?.map((e: Category) => (
-                <Card
-                  className="flex items-center py-2 px-4 shadow-sm"
-                  key={e.categoryName}
-                >
-                  <img
-                    className="h-10 w-10 object-cover rounded-lg"
-                    src={e.icon}
-                    alt={`${e.categoryName} icon`}
-                  />
-                  <h1 className="text-center text-sm ml-1 text-black">{e.categoryName}</h1>
-                </Card>
-              ))}
+            {categoryData?.data?.map((e: Category) => (
+              <Card
+                className="flex items-center py-2 px-4 shadow-sm"
+                key={e.categoryName}
+              >
+                <img
+                  className="h-10 w-10 object-cover rounded-lg"
+                  src={e.icon}
+                  alt={`${e.categoryName} icon`}
+                />
+                <h1 className="text-center text-sm ml-1 text-black">
+                  {e.categoryName}
+                </h1>
+              </Card>
+            ))}
           </div>
         </section>
 
         <section className="my-2">
           <h1 className="text-xl mb-2">Open Markets</h1>
           <div className="grid grid-cols-3 gap-2">
-            {}
-            {marketData && marketData.data?.length == 0 ? (
+            {!marketData?.data?.length ? (
               <div>
                 <h1>No markets open</h1>
               </div>
             ) : (
-              marketData?.data?.map(
+              marketData.data.map(
                 (market: Market) =>
                   !market.result &&
                   new Date(market.endTime).getTime() > new Date().getTime() && (
@@ -111,7 +141,7 @@ const Home = () => {
                           </h2>
                         </div>
                         <div>
-                          <h1 className=" text-sm">
+                          <h1 className="text-sm">
                             {market.description.split(".")[0]}
                           </h1>
                         </div>
@@ -126,18 +156,18 @@ const Home = () => {
                         />
                         <div className="grid grid-cols-2 gap-4 mt-4">
                           <MarketDrawer
-                          setModalOpen={setModalOpen}
+                            setModalOpen={setModalOpen}
                             stockType="Yes"
-                            price={4}
+                            price={getPrice(market.id)===0?-1:getPrice(market.id)}
                             balance={inrBalanceData?.data?.data?.balance / 100}
-                            market={market as Market}
+                            market={market}
                           />
                           <MarketDrawer
-                          setModalOpen={setModalOpen}
+                            setModalOpen={setModalOpen}
                             stockType="No"
-                            price={4}
+                            price={getPrice(market.id)===0?-1:(10-getPrice(market.id))}
                             balance={inrBalanceData?.data?.data?.balance / 100}
-                            market={market as Market}
+                            market={market}
                           />
                         </div>
                       </div>

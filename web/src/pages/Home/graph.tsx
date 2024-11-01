@@ -62,7 +62,7 @@ const BidirectionalChart: React.FC<BidirectionalChartProps> = ({ data }) => {
 
             <div className="w-1/2 flex justify-end items-center pr-2 ">
               <span className="text-sm mr-2">{yesData[index] || ''}</span>
-              <div className="relative h-8 flex-grow  border-b border-slate-300 ">
+              <div className="relative h-5 flex-grow  border-b border-slate-300 ">
                 <div 
                   className="absolute right-0 top-0 h-full   yesBar rounded-tl-lg rounded-bl-lg"
                   style={{

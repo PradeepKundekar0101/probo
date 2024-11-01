@@ -50,7 +50,7 @@ export const createUser = catchAsync(async(req:Request,res:Response)=>{
     //     data:{userId:user.id,locked:0,balance:0}
     // })
     pushToQueue("CREATE_USER",user.id)
-    const token = jwt.sign({id:user.id},JWT_SECRET!)
+    const token = jwt.sign({id:user.id},JWT_SECRET!,{expiresIn:"7d"})
     return sendResponse(res,201,{message:"User created",data:{
         user,
         token
@@ -77,7 +77,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
         sendResponse(res, 401, { message: "Invalid password", data: "" });
         return;
     }
-    const token = jwt.sign({ id: user.id }, JWT_SECRET!, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET!, { expiresIn: '7d' });
     return sendResponse(res, 200, {
         message: "Login successful",
         data: {

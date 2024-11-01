@@ -33,15 +33,14 @@ export const createOrderItem = (
 export const updateOrderStatus = (
   orderId: string,
   newTradedQuantity: number
-): OrderListItem | null => {
+): void => {
   const orderItem = GlobalData.ordersList.find(order => order.id === orderId);
   
-  if (!orderItem) return null;
+  if (!orderItem) return;
   
   orderItem.tradedQuantity = newTradedQuantity;
-  orderItem.status = getOrderStatus(orderItem.quantity, newTradedQuantity);
+  orderItem.status =  getOrderStatus(orderItem.quantity, newTradedQuantity);
   
-  return orderItem;
 };
 
 

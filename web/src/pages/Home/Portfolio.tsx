@@ -108,6 +108,7 @@ const Portfolio = () => {
     data: priceData,
     isLoading: isPriceLoading,
     isError: isPriceError,
+    error:priceError
   } = useQuery({
     queryKey: ["price", selectedMarket],
     queryFn: async () => {
@@ -329,6 +330,7 @@ const Portfolio = () => {
                                     >
                                       <Plus className="h-4 w-4" />
                                     </Button>
+                                    {isPriceError && <span>{priceError.message}</span>}
                                   </div>
                                 </div>
                               </div>
