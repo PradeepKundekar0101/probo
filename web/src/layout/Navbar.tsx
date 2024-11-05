@@ -17,8 +17,6 @@ import {
   DollarSign,
   Home,
   List,
-  ListChecks,
-  ListOrdered,
   LogOut,
   Settings,
   User,
@@ -52,7 +50,7 @@ const Navbar = ({ children }: { children: React.ReactNode }) => {
   })
 
   const [amount,setAmount] = useState(0)
-  const {mutate} = useMutation({
+  const {mutate,isPending} = useMutation({
     mutationKey:["onRamp"],
     mutationFn:async()=>{
       return await api.post("/onramp/inr",{amount:amount*100})
@@ -143,7 +141,7 @@ const Navbar = ({ children }: { children: React.ReactNode }) => {
                           </CardHeader>
                           <CardContent>
                           <CardDescription className=" text-3xl">
-                            {inrBalanceData && inrBalanceData.data?.data?.balance/100}
+                          ₹{inrBalanceData && inrBalanceData.data?.data?.balance/100}
                           </CardDescription>
                           </CardContent>
                         </Card>
@@ -155,14 +153,20 @@ const Navbar = ({ children }: { children: React.ReactNode }) => {
                           </CardHeader>
                           <CardContent>
                           <CardDescription className=" text-3xl">
-                            {inrBalanceData && inrBalanceData.data?.data?.locked/100}
+                          ₹{inrBalanceData && inrBalanceData.data?.data?.locked/100}
                           </CardDescription>
                           </CardContent>
                         </Card>
                       </div>
-                          <h1>On Ramp</h1>
-                          <Input onChange={(e)=>{setAmount(Number(e.target.value))}} value={amount} placeholder="Enter Amount in rs"></Input>
-                          <Button onClick={handleOnRamp}>Submit</Button>
+                          <h1>Add balance</h1>
+                          <Input type="number" onChange={(e)=>{setAmount(Number(e.target.value))}} value={amount} placeholder="Enter Amount in rs"></Input>
+                          <div className=" flex w-full justify-start space-x-5">
+                            <Button onClick={()=>{setAmount((prev)=>prev+100)}} variant={"outline"}>+100</Button>
+                            <Button onClick={()=>{setAmount((prev)=>prev+250)}} variant={"outline"}>+250</Button>
+                            <Button onClick={()=>{setAmount((prev)=>prev+500)}} variant={"outline"}>+500</Button>
+                            <Button onClick={()=>{setAmount((prev)=>prev+1000)}} variant={"outline"}>+1000</Button>
+                          </div>                          
+                          <Button onClick={handleOnRamp}>{ isPending?"Adding...":"Submit"}</Button>
                     </DialogContent>
                   </Dialog>
 

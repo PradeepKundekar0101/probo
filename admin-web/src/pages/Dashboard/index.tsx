@@ -47,15 +47,12 @@ const Dashboard = () => {
       
       switch (status) {
         case 'active':
-          // Active if end time is in future and no result
           return endTime > currentTime && market.result === null;
           
         case 'unsettled':
-          // Unsettled if end time has passed and no result
           return endTime <= currentTime && market.result === null;
           
         case 'settled':
-          // Settled if has result (regardless of time)
           return market.result !== null;
       }
     });

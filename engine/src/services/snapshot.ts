@@ -9,6 +9,7 @@ interface Configuration {
     data: any;
 }
 
+
 export class SnapShotManager {
     private s3: AWS.S3;
     private bucket: string;
@@ -19,12 +20,26 @@ export class SnapShotManager {
     private readonly maxSnapshots: number = 3; 
 
     constructor(config: Configuration) {
-        this.s3 = new AWS.S3({
-            region: config.region,
-            accessKeyId: config.accessId,
-            secretAccessKey: config.secretAccessKey,
-        });
-        this.bucket = config.bucket;
+        const awsConfig = {
+            region: config.region || process.env.AWS_REGION,
+            credentials: {
+                accessKeyId: config.accessId || process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: config.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY
+            }
+        };
+
+        // Validate required credentials
+        if (!awsConfig.credentials.accessKeyId || !awsConfig.credentials.secretAccessKey) {
+            throw new Error('AWS credentials are required. Please provide them via configuration or environment variables.');
+        }
+        //@ts-ignore
+        this.s3 = new AWS.S3(awsConfig);
+        this.bucket = config.bucket || process.env.AWS_BUCKET || '';
+        
+        if (!this.bucket) {
+            throw new Error('S3 bucket name is required');
+        }
+
         this.interval = config.interval;
         this.snapShotPrefix = 'snapshots/';
         this.data = config.data;

@@ -2,6 +2,7 @@ import { Consumer, Kafka, KafkaConfig } from "kafkajs";
 import AWS from "aws-sdk";
 import { updateInrBalance, updateStockBalance } from "../controller/balance";
 import { handleUpdateTradersCount } from "../controller/market";
+import { insertOrderItem } from "../controller/order";
 
 const s3 = new AWS.S3({ region: process.env.AWS_REGION! });
 
@@ -11,7 +12,8 @@ interface KafkaMessage {
       | "UPDATE_INR_BALANCE"
       | "UPDATE_STOCK_BALANCE"
       | "UPDATE_ORDERBOOK"
-      | "UPDATE_TRADER_COUNT";
+      | "UPDATE_TRADER_COUNT"
+      | "INSERT_ORDERITEM"
     data: any;
   };
 }
@@ -78,7 +80,6 @@ async function createKafkaInstance(): Promise<Kafka> {
   kafka = new Kafka(config);
   return kafka;
 }
-
 async function processMessage(
   operation: string,
   data: any,
@@ -89,16 +90,9 @@ async function processMessage(
       case "UPDATE_TRADER_COUNT":
         handleUpdateTradersCount(data)
         break;
-      case "UPDATE_INR_BALANCE":
-        await updateInrBalance(data);
+      case "INSERT_ORDERITEM":
+        insertOrderItem(data)
         break;
-      case "UPDATE_STOCK_BALANCE":
-        await updateStockBalance(data);
-        break;
-      case "UPDATE_ORDERBOOK":
-        break;
-      default:
-      // console.warn(`Unknown operation: ${operation}`);
     }
   } catch (error) {
     console.error(`Error processing message (${operation}):`, error);

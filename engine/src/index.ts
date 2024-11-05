@@ -1,11 +1,11 @@
 import Redis from "ioredis";
 import dotenv from "dotenv";
 import { processMessages } from "./app";
-// import { settleMarketsOnClose } from "./controller/settleMarket";
 import express from "express";
-import { createProducer } from "./services/kafka";
+import { createProducer, produceMessage } from "./services/kafka";
 import { SnapShotManager } from "./services/snapshot";
 import { GlobalData } from "./db";
+import moment from "moment";
 export const app = express();
 dotenv.config();
 const REDIS_URL = process.env.REDIS_URL
@@ -23,7 +23,7 @@ const snapshotManager = new SnapShotManager({
   accessId: process.env.AWS_ACCESS_KEY_ID_S3_USER!,
   secretAccessKey: process.env.AWS_ACCESS_KEY_SECRET_S3_USER!,
   bucket: process.env.SNAP_SHOTS_BUCKET_NAME!,
-  interval: 1000000,
+  interval: 10000,
   data: GlobalData,
   region: process.env.AWS_REGION!,
 });
@@ -35,9 +35,8 @@ const recoverDataFromSnapshot = async (): Promise<void> => {
       Object.assign(GlobalData.inrBalances, recoveredData.data.inrBalances || {});
       Object.assign(GlobalData.stockBalances, recoveredData.data.stockBalances || {});
       Object.assign(GlobalData.orderBook, recoveredData.data.orderBook || {});
-      Object.assign(GlobalData.markets, recoveredData.data.markets || {});
-      GlobalData.ordersList.length = 0; 
-      GlobalData.ordersList.push(...(recoveredData.data.ordersList || []));
+      Object.assign(GlobalData.markets, recoveredData.data.markets || {}); 
+      GlobalData.ordersList = recoveredData.data.ordersList || [];
     }
   } catch (error) {
     console.error('Failed to recover data from snapshot:', error);
@@ -47,17 +46,12 @@ const recoverDataFromSnapshot = async (): Promise<void> => {
 
 const startServer = async () => {
   try {
-
     await recoverDataFromSnapshot();
 
     pollQueue();
     createProducer();
     snapshotManager.startSnapShotting();
-    
-
-    // setTimeout(() => {
-    //   settleMarketsOnClose();
-    // }, 5000);
+  
 
     app.listen(8001, () => {
       console.log("API server Listening at 8001");
@@ -84,3 +78,4 @@ startServer().catch(error => {
   console.error("Failed to start server:", error);
   process.exit(1);
 });
+
