@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+  namespace: prod
+data:
+  POSTGRES_HOST: "postgres-svc"
+  POSTGRES_PORT: "5432"
+  REDIS_HOST: "redis-svc"
+  REDIS_PORT: "6379"
+  API_SERVER_URL: "http://api-svc:8000"
+  ENGINE_SERVER_URL: "http://engine-svc:8001"
+  WEBSOCKET_URL: "ws://websocket-svc:8002"

@@ -86,7 +86,7 @@ const SettledOrdersTable = () => {
                     : "bg-blue-100 text-blue-800"
                 }`}
               >
-                {order.status}
+                {order.status === "pending"?"refunded":order.status}
               </span>
             </TableCell>
             <TableCell className="font-mono text-xs">
